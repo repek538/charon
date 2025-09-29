@@ -10,6 +10,8 @@ pub mod systems {
 
 }
 
+pub mod utils;
+
 pub mod models{
     pub mod asteroids;
     pub mod moons;

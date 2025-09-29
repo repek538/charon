@@ -60,6 +60,8 @@ interface State {
   setWalletPanelOpen: (isOpen: boolean) => void;
   network: Network;
   setNetwork: (value: Network) => void;
+  playMode: PlayMode;
+  setPlayMode: (value: PlayMode) => void;
   onMainnet: boolean;
   onSepolia: boolean;
   onKatana: boolean;
@@ -131,6 +133,12 @@ export const useCharonStore = create<State>((set) => ({
   onSepolia: false,
   onKatana: false,
   isMuted: false,
+  playMode: undefined,
+  setPlayMode: (value) => {
+    set({ playMode: value });
+    set({ onMainnet: value === "multiplayer" });
+    set({ onSepolia: value === "singleplayer" });
+  },
   setIsMuted: (value) => set({ isMuted: value }),
   loginScreen: false,
   dojoConfig: undefined,
@@ -152,7 +160,10 @@ export type Network =
 
 
 
-
+export type PlayMode =
+  | "multiplayer"
+  | "singleplayer"
+  | undefined;
 
 
 export const tutorialContent = [
@@ -160,13 +171,13 @@ export const tutorialContent = [
         gType: 'section',
         data: {
             title: 'Welcome to Charon',
-            content: 'The ultimate digital football card game built on Starknet. Collect player cards, build your squad, and compete in strategic matches to become a legendary manager.'
+            content: 'The ultimate deep space rescue simulation built on Starknet. Command specialized vessels, manage expert crews, and execute critical rescue operations in the outer solar system.'
         }
     },
     {
         gType: 'image',
         data: {
-            url: '/Charon_intro.PNG',
+            url: '/charon_intro.PNG',
             width: '400px',
             height: '225px'
         }
@@ -175,7 +186,7 @@ export const tutorialContent = [
         gType: 'section',
         data: {
             title: 'Wallet Connection',
-            content: 'Connect your Starknet wallet to access all features, store your player cards, and participate in matches. Your wallet will hold your NFT cards and manage transactions.'
+            content: 'Connect your Starknet wallet to access all features, manage your vessel fleet, and participate in rescue operations. Your wallet will hold your NFT vessels and handle transactions.'
         }
     },
     {
@@ -197,27 +208,27 @@ export const tutorialContent = [
         gType: 'section',
         data: {
             title: 'Navigation Menu',
-            content: 'Use the top navigation to access different game sections:\n\n• Home: Main dashboard and game overview\n• Squad: Manage your player cards and formations\n• Matches: Find and join competitive matches\n• Marketplace: Buy, sell, and trade player cards\n• Tournaments: Participate in competitive events\n• Community: Connect with other managers'
+            content: 'Use the top navigation to access different sections:\n\n• Command: Main dashboard and operations overview\n• Fleet: Manage your vessels and configurations\n• Missions: Find and accept rescue operations\n• Hangar: Buy, upgrade, and maintain vessels\n• Operations: Participate in coordinated rescue events\n• Network: Connect with other rescue operators'
         }
     },
     {
         gType: 'section',
         data: {
             title: 'Getting Started',
-            content: 'Your journey begins with the main action buttons:\n\n• Play Now: Jump into a quick match\n• Tournaments: Enter competitive events\n• Events: Join special limited-time competitions\n• Rewards: Claim your earned prizes\n\nClick "Start Playing" or "New Game" to begin your manager career.'
+            content: 'Your rescue career begins with these options:\n\n• Launch Mission: Start an immediate rescue operation\n• Operations: Join coordinated fleet missions\n• Contracts: Accept specialized rescue contracts\n• Reports: Review your mission performance\n\nClick "Launch Mission" to begin your first rescue operation.'
         }
     },
     {
         gType: 'section',
         data: {
-            title: 'Squad Management',
-            content: 'The Squad section is where you build your team. Here you can create and manage multiple squads with different formations and strategies.'
+            title: 'Fleet Management',
+            content: 'The Fleet section is where you manage your vessels. Here you can configure ships, assign crew, and prepare for different mission types.'
         }
     },
     {
         gType: 'image',
         data: {
-            url: '/squad.PNG',
+            url: '/fleet.PNG',
             width: '400px',
             height: '225px'
         }
@@ -225,42 +236,42 @@ export const tutorialContent = [
     {
         gType: 'section',
         data: {
-            title: 'Creating Your First Squad',
-            content: 'To create a squad:\n\n1. Navigate to the Squad section\n2. Click "Create Squad" or the + button\n3. Choose a squad name\n4. Select your preferred formation (4-4-2, 4-3-3, 3-5-2, 5-3-2, 3-4-3)\n5. Your squad will be assigned a unique ID for identification'
+            title: 'Configuring Your First Vessel',
+            content: 'To configure a vessel:\n\n1. Navigate to the Fleet section\n2. Click "Configure Vessel" or the + button\n3. Choose a vessel designation\n4. Select your ship class (Corvette, Interceptor, Heavy Rescue)\n5. Your vessel will be assigned a unique call sign for identification'
         }
     },
     {
         gType: 'section',
         data: {
-            title: 'Formation Types',
-            content: 'Each formation offers different tactical advantages:\n\n• F442: Balanced 4-4-2 formation with strong midfield\n• F433: Attacking 4-3-3 with three forwards\n• F352: 3-5-2 with wing-backs for width\n• F532: Defensive 5-3-2 with extra defenders\n• F343: Ultra-attacking 3-4-3 formation\n\nChoose based on your playing style and available players.'
+            title: 'Vessel Classes',
+            content: 'Each vessel class offers different operational advantages:\n\n• Corvette: Balanced multi-role vessel with moderate cargo\n• Interceptor: Fast response ship with advanced navigation\n• Heavy Rescue: Large capacity vessel with extended life support\n• Patrol Craft: Long-range vessel with enhanced sensors\n• Engineering Ship: Specialized vessel for complex operations\n\nChoose based on your mission preferences and operational style.'
         }
     },
     {
         gType: 'section',
         data: {
-            title: 'Player Cards & Positions',
-            content: 'Player cards have four main positions:\n\n• Goalkeeper: Last line of defense\n• Defender: Protect your goal and start attacks\n• Midfielder: Control the game\'s tempo\n• Forward: Score goals and create chances\n\nEach player has Attack, Defense, and Special stats that determine their effectiveness.'
+            title: 'Crew Specialists & Roles',
+            content: 'Crew members have six main specializations:\n\n• Captain: Leadership and mission coordination\n• Pilot: Navigation and ship maneuvering\n• Engineer: Systems maintenance and repairs\n• Gunner: Defensive systems and threat response\n• Medic: Crew health and rescued personnel care\n• Scientist: Scanning and data recovery operations\n\nEach specialist has Health, Intelligence, and Experience stats that determine their effectiveness.'
         }
     },
     {
         gType: 'section',
         data: {
-            title: 'Card Rarity System',
-            content: 'Player cards come in five rarity levels:\n\n• Common: Basic players with standard abilities\n• Rare: Above-average players with good stats\n• Epic: High-quality players with strong abilities\n• Legendary: Elite players with exceptional stats\n• Icon: Ultimate players with maximum potential\n\nHigher rarity cards have better stats and special abilities.'
+            title: 'Crew Experience System',
+            content: 'Crew members progress through experience levels:\n\n• Rookie: Basic crew with standard abilities\n• Experienced: Proven crew with improved stats\n• Veteran: Skilled crew with advanced capabilities\n• Elite: Expert crew with exceptional performance\n• Legendary: Master crew with unique specializations\n\nHigher experience levels unlock special abilities and mission bonuses.'
         }
     },
     {
         gType: 'section',
         data: {
-            title: 'Marketplace',
-            content: 'The Marketplace is where you acquire new player cards to strengthen your squad.'
+            title: 'Hangar',
+            content: 'The Hangar is where you acquire new vessels and equipment to expand your rescue capabilities.'
         }
     },
     {
         gType: 'image',
         data: {
-            url: '/marketplace.PNG',
+            url: '/hangar.PNG',
             width: '400px',
             height: '225px'
         }
@@ -268,113 +279,113 @@ export const tutorialContent = [
     {
         gType: 'section',
         data: {
-            title: 'Acquiring Players',
-            content: 'In the Marketplace you can:\n\n• Browse available player cards\n• View detailed player statistics and abilities\n• Purchase cards using in-game currency or tokens\n• Add players directly to your squad\n• Check player rarity and special abilities before buying'
+            title: 'Acquiring Equipment',
+            content: 'In the Hangar you can:\n\n• Browse available vessel configurations\n• View detailed ship specifications and capabilities\n• Purchase vessels using credits or tokens\n• Upgrade existing ship systems\n• Check vessel class and special equipment before buying'
         }
     },
     {
         gType: 'section',
         data: {
-            title: 'Squad Building Strategy',
-            content: 'Build a balanced squad by:\n\n• Filling all 11 starting positions according to your formation\n• Having backup players for substitutions\n• Balancing Attack, Defense, and Special stats across positions\n• Considering player chemistry - same team players work better together\n• Planning for different tactical situations'
+            title: 'Fleet Building Strategy',
+            content: 'Build an effective fleet by:\n\n• Having vessels suited for different mission types\n• Maintaining backup crew for extended operations\n• Balancing fuel capacity, cargo space, and defensive systems\n• Considering crew specialization synergy\n• Planning for various emergency scenarios'
         }
     },
     {
         gType: 'section',
         data: {
-            title: 'Match System',
-        content: 'Charon features a strategic turn-based match system where you compete against other managers in real-time.'
+            title: 'Mission System',
+            content: 'Charon features a strategic resource management system where you execute time-critical rescue operations across the outer solar system.'
         }
     },
     {
         gType: 'section',
         data: {
-            title: 'Creating and Joining Matches',
-            content: 'To participate in matches:\n\n• Create Match: Start a new match with your selected squad\n• Join Match: Enter an existing match created by another manager\n• Choose your squad ID when creating or joining\n• Wait for your opponent to join (for created matches)\n• Match begins once both managers are ready'
+            title: 'Mission Types',
+            content: 'Different rescue operations require different approaches:\n\n• Emergency Extraction: Time-critical personnel rescue\n• Data Recovery: Retrieve vital research information\n• Equipment Salvage: Recover valuable technology\n• Station Evacuation: Large-scale emergency operations\n• Search and Rescue: Locate missing vessels or crew'
         }
     },
     {
         gType: 'section',
         data: {
-            title: 'Match Mechanics - Commit/Reveal System',
-            content: 'Matches use a secure commit-reveal system:\n\n1. COMMIT Phase: Choose your action and submit a hidden commitment\n   • Select Attack, Defend, Special, or Substitute\n   • Your choice is encrypted until the reveal phase\n\n2. REVEAL Phase: Both players reveal their actions simultaneously\n   • Actions are resolved based on the combination\n   • Results determine the outcome of that turn'
+            title: 'Resource Management',
+            content: 'Successful missions require careful resource planning:\n\n1. FUEL: Limited fuel requires efficient navigation routes\n2. CARGO: Balance rescue capacity with equipment needs\n3. CREW STAMINA: Manage crew fatigue during long operations\n4. LIFE SUPPORT: Ensure adequate resources for rescued personnel\n5. EMERGENCY SUPPLIES: Medical supplies and repair materials'
         }
     },
     {
         gType: 'section',
         data: {
-            title: 'Action Types',
-            content: 'Four main actions available during matches:\n\n• Attack: Focus on scoring goals and creating chances\n• Defend: Strengthen your defense and block opponent attacks\n• Special: Use special abilities and tactical cards\n• Substitute: Replace players during the match for tactical advantages\n\nChoose your actions based on your strategy and opponent\'s likely moves.'
+            title: 'Mission Phases',
+            content: 'Four main phases in rescue operations:\n\n• Navigation: Plot course and manage fuel consumption\n• Assessment: Evaluate situation and plan approach\n• Execution: Perform rescue while managing hazards\n• Extraction: Return safely with rescued personnel\n\nEach phase presents different challenges and decision points.'
         }
     },
     {
         gType: 'section',
         data: {
-            title: 'Special Abilities & Tactic Cards',
-            content: 'Enhanced gameplay through special features:\n\n• Special Abilities: Unique powers attached to high-rarity cards\n• Tactic Cards: Strategic cards that provide temporary advantages\n• Player Substitutions: Swap players mid-match for tactical changes\n• Chemistry Bonuses: Team synergy affects overall performance'
+            title: 'Environmental Hazards',
+            content: 'Deep space presents multiple dangers:\n\n• Asteroid Fields: Navigate carefully to avoid hull damage\n• Hostile Encounters: Unknown threats in deep space\n• System Failures: Equipment malfunctions during critical moments\n• Radiation: Exposure risks in certain sectors\n• Time Limits: Life support failures create urgency'
         }
     },
     {
         gType: 'section',
         data: {
-            title: 'Match Flow',
-            content: 'A typical match progresses as follows:\n\n1. Pre-match: Select your squad and formation\n2. Match Start: Both managers commit their first actions\n3. Turn Resolution: Actions are revealed and resolved\n4. Ongoing Turns: Continue committing and revealing actions\n5. Match End: Final score determines the winner\n6. Rewards: Winner receives prizes and progression'
+            title: 'Mission Flow',
+            content: 'A typical rescue operation follows this pattern:\n\n1. Mission Briefing: Review objectives and hazard assessment\n2. Fleet Preparation: Select vessel and assign crew\n3. Navigation Phase: Plot route and manage resources\n4. Operation Execution: Perform rescue under time pressure\n5. Mission Complete: Return and debrief for rewards\n6. Crew Recovery: Manage crew fatigue and experience gain'
         }
     },
     {
         gType: 'section',
         data: {
-            title: 'Advanced Squad Management',
-            content: 'Optimize your team performance:\n\n• Calculate Chemistry: Check how well your players work together\n• Formation Changes: Adapt your formation mid-season\n• Player Positioning: Move players to optimize their effectiveness\n• Squad Rotation: Manage player fatigue and form\n• Backup Plans: Have substitute strategies ready'
+            title: 'Advanced Fleet Operations',
+            content: 'Optimize your rescue effectiveness:\n\n• Crew Synergy: Check how specialists work together\n• Mission Specialization: Configure vessels for specific operations\n• Resource Optimization: Maximize fuel and cargo efficiency\n• Risk Assessment: Balance speed versus safety\n• Emergency Protocols: Have contingency plans ready'
         }
     },
     {
         gType: 'section',
         data: {
             title: 'Blockchain Integration',
-            content: 'Charon leverages Starknet  for:\n\n• True ownership of player card NFTs\n• Secure match results and fair play\n• Transparent trading and marketplace transactions\n• Permanent record of achievements and statistics\n• Cross-platform compatibility and portability'
+            content: 'Charon leverages Starknet for:\n\n• True ownership of vessel and crew NFTs\n• Permanent mission records and achievements\n• Transparent resource trading and transactions\n• Cross-platform fleet portability\n• Decentralized rescue operation coordination'
         }
     },
     {
         gType: 'section',
         data: {
-            title: 'Player Development',
-            content: 'Improve your cards over time:\n\n• Update Stats: Enhance Attack, Defense, and Special attributes\n• Rarity Upgrades: Increase card rarity through gameplay\n• Special Abilities: Unlock and create new abilities\n• Seasonal Updates: Cards can be updated with new seasons\n• Performance Tracking: Monitor your players\' match statistics'
+            title: 'Crew Development',
+            content: 'Improve your specialists over time:\n\n• Skill Enhancement: Increase Health, Intelligence, and Experience\n• Specialization Upgrades: Unlock advanced crew abilities\n• Cross-Training: Develop secondary specializations\n• Mission Experience: Crew improve through successful operations\n• Performance Tracking: Monitor individual crew statistics'
         }
     },
     {
         gType: 'section',
         data: {
-            title: 'Tournaments & Competition',
-        content: 'Compete in organized tournaments for greater rewards and recognition. Tournament play offers the highest stakes and best prizes in Charon.'
+            title: 'Operations & Coordination',
+            content: 'Participate in large-scale rescue operations for greater rewards and recognition. Coordinated operations offer the highest stakes and best rewards in Charon.'
         }
     },
     {
         gType: 'section',
         data: {
-            title: 'Winning Strategies',
-            content: 'Master these key concepts:\n\n• Squad Balance: Don\'t neglect any position\n• Chemistry Management: Team synergy is crucial\n• Formation Flexibility: Adapt to different opponents\n• Resource Management: Use special abilities wisely\n• Market Timing: Buy low, sell high in the marketplace\n• Practice: Regular matches improve your tactical skills'
+            title: 'Successful Operations',
+            content: 'Master these key concepts:\n\n• Resource Planning: Never underestimate fuel requirements\n• Crew Balance: Each specialist role is crucial\n• Risk Management: Know when to abort vs. push forward\n• Equipment Maintenance: Regular upkeep prevents failures\n• Market Intelligence: Trade resources efficiently\n• Experience Building: Regular missions develop crew expertise'
         }
     },
     {
         gType: 'section',
         data: {
-            title: 'Season 5 Cards',
-            content: 'New Season 5 cards are now available in the store! These cards feature:\n\n• Updated player statistics\n• New special abilities\n• Enhanced artwork and designs\n• Seasonal bonus attributes\n• Limited-time availability\n\nCheck the marketplace regularly for new releases.'
+            title: 'Deep Space Sector Updates',
+            content: 'New sectors are now accessible in the outer system! These regions feature:\n\n• Enhanced mission complexity\n• Advanced rescue scenarios\n• Upgraded equipment requirements\n• Extended operational ranges\n• Limited access windows\n\nCheck mission briefings regularly for new opportunities.'
         }
     },
     {
         gType: 'section',
         data: {
-            title: 'Tips for New Managers',
-        content: 'Start your Charon journey successfully:\n\n• Begin with a solid defensive formation\n• Focus on building chemistry over individual star players\n• Learn the commit-reveal system through practice matches\n• Study your opponents\' tendencies and adapt\n• Invest in a balanced squad rather than just forwards\n• Save resources for strategic moments in important matches'
+            title: 'Tips for New Operators',
+            content: 'Start your rescue career successfully:\n\n• Begin with local sector missions to build experience\n• Focus on crew training over expensive equipment initially\n• Learn resource management through practice operations\n• Study environmental hazards and plan accordingly\n• Invest in balanced crew rather than specialists only\n• Save resources for critical moments in emergency situations'
         }
     },
     {
         gType: 'section',
         data: {
             title: 'Getting Help',
-            content: 'Need assistance? Access support through:\n\n• Community section for player discussions\n• In-game help buttons (look for "i" icons)\n• Official documentation and guides\n• Community forums and Discord\n• Customer support for technical issues\n\nWelcome to the pitch, manager. Time to build your legacy!'
+            content: 'Need assistance? Access support through:\n\n• Network section for operator discussions\n• In-game help systems (look for "info" icons)\n• Official operation manuals and procedures\n• Operator forums and communication channels\n• Technical support for system issues\n\nWelcome to the frontier, Commander. Lives depend on your decisions.'
         }
     }
 ];

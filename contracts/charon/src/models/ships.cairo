@@ -8,7 +8,7 @@ pub struct Ship {
     pub id: ContractAddress,                     // Unique ship ID
     pub owner: ContractAddress,      // Player or faction holding it
     pub faction: Faction,            // Political allegiance
-    pub class: ShipClass,            // Realistic naval class
+    pub s_class: ShipClass,            // Realistic naval s_class
     pub hull_points: u32,            // Structural integrity
     pub shield_points: u32,          // If using near-future shielding, else drop
     pub speed: u32,                  // Maneuverability (delta-v proxy)
@@ -64,7 +64,7 @@ pub struct Railgun {
     #[key]
     pub ship_id: ContractAddress,
     pub ship: ContractAddress,
-    pub damage: u32,                 // 150-300 depending on class
+    pub damage: u32,                 // 150-300 depending on s_class
     pub max_range: u32,              // 2000km
     pub optimal_range: u32,          // 800km
     pub rate_of_fire: u8,            // 1 shot per turn
@@ -132,6 +132,7 @@ pub struct Shield {
 #[derive(Serde, Copy, Drop, Introspect, PartialEq, Debug, DojoStore, Default)]
 pub enum ShipClass {
     #[default]
+    None,
     Corvette,     // Fast attack / patrol - Light railguns, few PDCs
     Frigate,      // Escort, anti-fighter/missile defense - Heavy PDCs
     Destroyer,    // Heavy escort, fleet backbone - Balanced weapons
@@ -145,6 +146,7 @@ pub enum ShipClass {
 #[derive(Serde, Copy, Drop, Introspect, PartialEq, Debug, DojoStore, Default)]
 pub enum Faction {
     #[default]
+    None,
     Pirates,         // Independent raiders
     UN,              // Earth-based United Nations
     MarsFederation,  // Martian Congressional Republic  
@@ -195,7 +197,7 @@ pub struct ScanResult {
     pub distance: u32,               // Range to target in km
     pub bearing: u32,                // 0-359 degrees
     pub velocity: u32,               // Target speed
-    pub ship_class_known: bool,      // Whether ship class is identified
+    pub ship_class_known: bool,      // Whether ship s_class is identified
     pub faction_known: bool,         // Whether faction is identified
     pub armament_known: bool,        // Whether weapons are identified
     pub hull_status_known: bool,     // Whether damage state is known
@@ -211,7 +213,7 @@ pub impl ShipImpl of ShipTrait {
         id: ContractAddress,
         owner: ContractAddress,
         faction: Faction,
-        class: ShipClass,
+        s_class: ShipClass,
         hull_points: u32,
         shield_points: u32,
         speed: u32,
@@ -232,7 +234,7 @@ pub impl ShipImpl of ShipTrait {
             id,
             owner,
             faction,
-            class,
+            s_class,
             hull_points,
             shield_points,
             speed,
@@ -261,7 +263,7 @@ pub impl ShipImpl of ShipTrait {
 
     #[inline(always)]
     fn get_class_bonus(self: Ship) -> u32 {
-        match self.class {
+        match self.s_class {
             ShipClass::Battleship => 100,
             ShipClass::Cruiser => 75,
             ShipClass::Destroyer => 50,
@@ -270,49 +272,50 @@ pub impl ShipImpl of ShipTrait {
             ShipClass::Carrier => 60,
             ShipClass::Freighter => 5,
             ShipClass::PirateSkiff => 15,
+            ShipClass::None => 0,
         }
     }
 
     #[inline(always)]
     fn has_advantage_over(self: Ship, target: Ship) -> bool {
         // Corvettes counter larger ships with speed
-        if self.class == ShipClass::Corvette {
-            if target.class == ShipClass::Battleship || target.class == ShipClass::Cruiser {
+        if self.s_class == ShipClass::Corvette {
+            if target.s_class == ShipClass::Battleship || target.s_class == ShipClass::Cruiser {
                 return true;
             }
         }
         
         // Frigates counter corvettes and fighters
-        if self.class == ShipClass::Frigate {
-            if target.class == ShipClass::Corvette || target.class == ShipClass::PirateSkiff {
+        if self.s_class == ShipClass::Frigate {
+            if target.s_class == ShipClass::Corvette || target.s_class == ShipClass::PirateSkiff {
                 return true;
             }
         }
         
         // Destroyers counter frigates and corvettes
-        if self.class == ShipClass::Destroyer {
-            if target.class == ShipClass::Frigate || target.class == ShipClass::Corvette {
+        if self.s_class == ShipClass::Destroyer {
+            if target.s_class == ShipClass::Frigate || target.s_class == ShipClass::Corvette {
                 return true;
             }
         }
         
         // Cruisers counter destroyers
-        if self.class == ShipClass::Cruiser && target.class == ShipClass::Destroyer {
+        if self.s_class == ShipClass::Cruiser && target.s_class == ShipClass::Destroyer {
             return true;
         }
         
         // Battleships counter everything except corvettes
-        if self.class == ShipClass::Battleship {
-            if target.class == ShipClass::Cruiser 
-                || target.class == ShipClass::Destroyer 
-                || target.class == ShipClass::Frigate 
-                || target.class == ShipClass::Carrier {
+        if self.s_class == ShipClass::Battleship {
+            if target.s_class == ShipClass::Cruiser 
+                || target.s_class == ShipClass::Destroyer 
+                || target.s_class == ShipClass::Frigate 
+                || target.s_class == ShipClass::Carrier {
                 return true;
             }
         }
         
         // Carriers vulnerable to direct combat (except from corvettes)
-        if target.class == ShipClass::Carrier && self.class != ShipClass::Corvette {
+        if target.s_class == ShipClass::Carrier && self.s_class != ShipClass::Corvette {
             return true;
         }
         
@@ -321,12 +324,12 @@ pub impl ShipImpl of ShipTrait {
 
     #[inline(always)]
     fn can_engage_at_range(self: Ship) -> bool {
-        self.torpedoes > 0 || (self.railguns > 0 && self.class != ShipClass::Corvette)
+        self.torpedoes > 0 || (self.railguns > 0 && self.s_class != ShipClass::Corvette)
     }
 
     #[inline(always)]
     fn get_movement_range(self: Ship) -> u32 {
-        let base_movement = match self.class {
+        let base_movement = match self.s_class {
             ShipClass::Corvette => self.speed / 2 + 3,
             ShipClass::Frigate => self.speed / 3 + 2,
             ShipClass::Destroyer => self.speed / 4 + 2,
@@ -335,6 +338,7 @@ pub impl ShipImpl of ShipTrait {
             ShipClass::Carrier => self.speed / 5,
             ShipClass::Freighter => self.speed / 6,
             ShipClass::PirateSkiff => self.speed / 2 + 4,
+            ShipClass::None => 0,
         };
         
         // Fuel affects movement
@@ -347,7 +351,7 @@ pub impl ShipImpl of ShipTrait {
 
     #[inline(always)]
     fn is_capital_ship(self: Ship) -> bool {
-        match self.class {
+        match self.s_class {
             ShipClass::Battleship | ShipClass::Cruiser | ShipClass::Carrier => true,
             _ => false
         }
@@ -355,11 +359,11 @@ pub impl ShipImpl of ShipTrait {
 
     #[inline(always)]
     fn can_provide_support(self: Ship) -> bool {
-        if self.class == ShipClass::Cruiser || self.class == ShipClass::Carrier {
+        if self.s_class == ShipClass::Cruiser || self.s_class == ShipClass::Carrier {
             return true;
         }
         
-        if self.class == ShipClass::Destroyer && self.crew_size >= 200 {
+        if self.s_class == ShipClass::Destroyer && self.crew_size >= 200 {
             return true;
         }
         
@@ -368,7 +372,7 @@ pub impl ShipImpl of ShipTrait {
 
     #[inline(always)]
     fn get_detection_signature(self: Ship) -> u8 {
-        let base_signature = match self.class {
+        let base_signature = match self.s_class {
             ShipClass::PirateSkiff => 20,
             ShipClass::Corvette => 35,
             ShipClass::Frigate => 50,
@@ -377,6 +381,7 @@ pub impl ShipImpl of ShipTrait {
             ShipClass::Battleship => 100,
             ShipClass::Carrier => 90,
             ShipClass::Freighter => 60,
+            ShipClass::None => 0,
         };
         
         // Power output affects signature
@@ -387,7 +392,7 @@ pub impl ShipImpl of ShipTrait {
 
     #[inline(always)]
     fn calculate_fuel_consumption(self: Ship, distance: u32) -> u32 {
-        let base_consumption = match self.class {
+        let base_consumption = match self.s_class {
             ShipClass::Corvette => distance / 10,
             ShipClass::Frigate => distance / 8,
             ShipClass::Destroyer => distance / 6,
@@ -396,6 +401,7 @@ pub impl ShipImpl of ShipTrait {
             ShipClass::Carrier => distance / 4,
             ShipClass::Freighter => distance / 7,
             ShipClass::PirateSkiff => distance / 12,
+            ShipClass::None => 0,
         };
         if base_consumption == 0 { 1 } else { base_consumption }
     }
@@ -403,19 +409,19 @@ pub impl ShipImpl of ShipTrait {
         #[inline(always)]
     fn can_dock_with(self: Ship, target: Ship) -> bool {
         // Only small ships can dock with carriers
-        if target.class == ShipClass::Carrier {
-            if self.class == ShipClass::Corvette || self.class == ShipClass::PirateSkiff {
+        if target.s_class == ShipClass::Carrier {
+            if self.s_class == ShipClass::Corvette || self.s_class == ShipClass::PirateSkiff {
                 return true;
             }
         }
         
         // Freighters can dock with capital ships for resupply
-        if self.class == ShipClass::Freighter && target.is_capital_ship() {
+        if self.s_class == ShipClass::Freighter && target.is_capital_ship() {
             return true;
         }
         
         // Ships can dock with friendly freighters
-        if target.class == ShipClass::Freighter && self.faction == target.faction {
+        if target.s_class == ShipClass::Freighter && self.faction == target.faction {
             return true;
         }
         

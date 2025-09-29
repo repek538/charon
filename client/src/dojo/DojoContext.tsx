@@ -54,15 +54,15 @@ export const DojoContextProvider = ({
     );
 
     const masterAccount = useMemo(
-        () =>
-            new Account(
-                dojoProvider.provider as any,
-                dojoConfig.masterAddress,
-                dojoConfig.masterPrivateKey,
-                "1"
-            ),
-        []
-    );
+    () =>
+        new Account({
+            provider: dojoProvider.provider as any,
+            address: dojoConfig.masterAddress,
+            signer: dojoConfig.masterPrivateKey,
+            cairoVersion: "1"
+        }),
+    []
+);
 
 
     const burnerManagerData = useBurnerManager({ burnerManager });

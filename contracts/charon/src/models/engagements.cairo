@@ -223,7 +223,7 @@ pub impl EngagementImpl of EngagementTrait {
             
             // Escape attempts
             (PlayerAction::Burn, EnemyAction::OpenFire) => {
-                // Success depends on ship speed/class
+                // Success depends on ship speed/s_class
                 EngagementOutcome::PlayerEscaped // Simplified
             },
             

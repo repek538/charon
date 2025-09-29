@@ -1,8 +1,8 @@
 {
   "world": {
-    "class_hash": "0x57994b6a75fad550ca18b41ee82e2110e158c59028c4478109a67965a0e5b1e",
-    "address": "0x15dfd744d884d22eddbc746d47319b72e3e4ae386d871a2d3e7ed86cda62614",
-    "seed": "charon",
+    "class_hash": "0x13d92333361bb7049c1232c0a5404e2c19082ededc3a73d75cb33fa952adec7",
+    "address": "0x2ee27d42693bbcdd9bee44dd821fd020c826545ec9c56088ad563ae054bb373",
+    "seed": "charon_5",
     "name": "Charon",
     "entrypoints": [
       "uuid",
@@ -11,13 +11,11 @@
       "register_event",
       "register_model",
       "register_contract",
-      "register_external_contract",
       "register_library",
       "init_contract",
       "upgrade_event",
       "upgrade_model",
       "upgrade_contract",
-      "upgrade_external_contract",
       "emit_event",
       "emit_events",
       "set_entity",
@@ -85,10 +83,6 @@
           {
             "name": "Library",
             "type": "(core::starknet::class_hash::ClassHash, core::felt252)"
-          },
-          {
-            "name": "ExternalContract",
-            "type": "(core::starknet::contract_address::ContractAddress, core::felt252)"
           }
         ]
       },
@@ -219,10 +213,6 @@
           {
             "name": "Enum",
             "type": "core::array::Span::<dojo::meta::layout::FieldLayout>"
-          },
-          {
-            "name": "FixedArray",
-            "type": "(core::array::Span::<dojo::meta::layout::Layout>, core::integer::u32)"
           }
         ]
       },
@@ -379,34 +369,6 @@
           },
           {
             "type": "function",
-            "name": "register_external_contract",
-            "inputs": [
-              {
-                "name": "namespace",
-                "type": "core::byte_array::ByteArray"
-              },
-              {
-                "name": "contract_name",
-                "type": "core::byte_array::ByteArray"
-              },
-              {
-                "name": "instance_name",
-                "type": "core::byte_array::ByteArray"
-              },
-              {
-                "name": "contract_address",
-                "type": "core::starknet::contract_address::ContractAddress"
-              },
-              {
-                "name": "block_number",
-                "type": "core::integer::u64"
-              }
-            ],
-            "outputs": [],
-            "state_mutability": "external"
-          },
-          {
-            "type": "function",
             "name": "register_library",
             "inputs": [
               {
@@ -499,30 +461,6 @@
                 "type": "core::starknet::class_hash::ClassHash"
               }
             ],
-            "state_mutability": "external"
-          },
-          {
-            "type": "function",
-            "name": "upgrade_external_contract",
-            "inputs": [
-              {
-                "name": "namespace",
-                "type": "core::byte_array::ByteArray"
-              },
-              {
-                "name": "instance_name",
-                "type": "core::byte_array::ByteArray"
-              },
-              {
-                "name": "contract_address",
-                "type": "core::starknet::contract_address::ContractAddress"
-              },
-              {
-                "name": "block_number",
-                "type": "core::integer::u64"
-              }
-            ],
-            "outputs": [],
             "state_mutability": "external"
           },
           {
@@ -990,85 +928,6 @@
       },
       {
         "type": "event",
-        "name": "dojo::world::world_contract::world::ExternalContractRegistered",
-        "kind": "struct",
-        "members": [
-          {
-            "name": "namespace",
-            "type": "core::byte_array::ByteArray",
-            "kind": "key"
-          },
-          {
-            "name": "contract_name",
-            "type": "core::byte_array::ByteArray",
-            "kind": "key"
-          },
-          {
-            "name": "instance_name",
-            "type": "core::byte_array::ByteArray",
-            "kind": "key"
-          },
-          {
-            "name": "contract_selector",
-            "type": "core::felt252",
-            "kind": "key"
-          },
-          {
-            "name": "class_hash",
-            "type": "core::starknet::class_hash::ClassHash",
-            "kind": "data"
-          },
-          {
-            "name": "contract_address",
-            "type": "core::starknet::contract_address::ContractAddress",
-            "kind": "data"
-          },
-          {
-            "name": "block_number",
-            "type": "core::integer::u64",
-            "kind": "data"
-          }
-        ]
-      },
-      {
-        "type": "event",
-        "name": "dojo::world::world_contract::world::ExternalContractUpgraded",
-        "kind": "struct",
-        "members": [
-          {
-            "name": "namespace",
-            "type": "core::byte_array::ByteArray",
-            "kind": "key"
-          },
-          {
-            "name": "instance_name",
-            "type": "core::byte_array::ByteArray",
-            "kind": "key"
-          },
-          {
-            "name": "contract_selector",
-            "type": "core::felt252",
-            "kind": "key"
-          },
-          {
-            "name": "class_hash",
-            "type": "core::starknet::class_hash::ClassHash",
-            "kind": "data"
-          },
-          {
-            "name": "contract_address",
-            "type": "core::starknet::contract_address::ContractAddress",
-            "kind": "data"
-          },
-          {
-            "name": "block_number",
-            "type": "core::integer::u64",
-            "kind": "data"
-          }
-        ]
-      },
-      {
-        "type": "event",
         "name": "dojo::world::world_contract::world::ModelUpgraded",
         "kind": "struct",
         "members": [
@@ -1399,16 +1258,6 @@
             "kind": "nested"
           },
           {
-            "name": "ExternalContractRegistered",
-            "type": "dojo::world::world_contract::world::ExternalContractRegistered",
-            "kind": "nested"
-          },
-          {
-            "name": "ExternalContractUpgraded",
-            "type": "dojo::world::world_contract::world::ExternalContractUpgraded",
-            "kind": "nested"
-          },
-          {
             "name": "ModelUpgraded",
             "type": "dojo::world::world_contract::world::ModelUpgraded",
             "kind": "nested"
@@ -1479,8 +1328,8 @@
   },
   "contracts": [
     {
-      "address": "0x1a59bd3f8bf8d9233c0a7d921a328b8a3f716bb443783906746d320003f4614",
-      "class_hash": "0x233720c874db29d9872c71efb1f704d17e2f81ddad84f0759f4a5857d4d3a09",
+      "address": "0x384af900ce628b8a934838bde8278f5fb589ac8f4dc961a3f0a2c318dfe3b5d",
+      "class_hash": "0x6c0dde1144eb9eca0ce99eaecc87bd9f33220bd72a460f70048a4f91c7aa60",
       "abi": [
         {
           "type": "impl",
@@ -1494,7 +1343,7 @@
         },
         {
           "type": "impl",
-          "name": "DojoDeployedContractImpl",
+          "name": "actions__DeployedContractImpl",
           "interface_name": "dojo::meta::interface::IDeployedResource"
         },
         {
@@ -1708,8 +1557,8 @@
       ]
     },
     {
-      "address": "0x4a442df608914d5d581c652890dae2a77a25bc9848ea3399d36bb5957d37a25",
-      "class_hash": "0x299f8b2b9f23430c29280aa61a9dc21447b0fe0e12f4ab0ab7e23cc1f1b96fc",
+      "address": "0x3fe48c481e26c3e81e66f4d03eaaca0c6fe00e243e3689ffa58b0537e74e926",
+      "class_hash": "0x268614529074c25519e374e4b36fe1b1c8445b5a89c644622e7e80245bf4783",
       "abi": [
         {
           "type": "impl",
@@ -1723,7 +1572,7 @@
         },
         {
           "type": "impl",
-          "name": "DojoDeployedContractImpl",
+          "name": "crew__DeployedContractImpl",
           "interface_name": "dojo::meta::interface::IDeployedResource"
         },
         {
@@ -1920,8 +1769,8 @@
       ]
     },
     {
-      "address": "0x45dec01b76287816ea80f3a0daf6bf742aa43066c4d2c021e5c7f69180b363",
-      "class_hash": "0x11feb4b86054856fac52acf27811ef33a0b3bbb400553a35b31cea803c0def",
+      "address": "0x6415d4cb3e43ef6ffe42bdec7d095d090eee7b06b8d4c7b827652d89922dd70",
+      "class_hash": "0xe744e9717a3d546c2d030dc0585a4ccbff0595397304b0d88a98661c03f949",
       "abi": [
         {
           "type": "impl",
@@ -1935,7 +1784,7 @@
         },
         {
           "type": "impl",
-          "name": "DojoDeployedContractImpl",
+          "name": "game__DeployedContractImpl",
           "interface_name": "dojo::meta::interface::IDeployedResource"
         },
         {
@@ -2120,8 +1969,8 @@
       ]
     },
     {
-      "address": "0x4a667dcf67a52ace6947d8430e5b8f056b1265cdb96438cf80d62e26b1b44a2",
-      "class_hash": "0x4b53e33a1f746c6735eb7e6288543003eb03030b53814eb5282c31d371d2a30",
+      "address": "0x5859dba499bb714d71bf80041c8f7ef2208110ca685381e520f0822d43adc13",
+      "class_hash": "0x23618365eb586a03b9d37c71c6da1b2dea83d914f4162a800c5b1f5a3deba69",
       "abi": [
         {
           "type": "impl",
@@ -2135,7 +1984,7 @@
         },
         {
           "type": "impl",
-          "name": "DojoDeployedContractImpl",
+          "name": "oberon_crew__DeployedContractImpl",
           "interface_name": "dojo::meta::interface::IDeployedResource"
         },
         {
@@ -2648,8 +2497,8 @@
       ]
     },
     {
-      "address": "0x436f9a5f750595059fc8125ee2228a2d613b32eb96e351a1212aab5bb6cf532",
-      "class_hash": "0x7e4c51d79612564ecfba8790ee8e5119fae15451c74944d537b834818d068fe",
+      "address": "0x4661a992a6135a95687851be7056f38360fc0bad5cee8b96e124992ec52e3cb",
+      "class_hash": "0x78c394cdaea15209cbca106337953179380d45b6a62e8c5def5ae7a56f60e4d",
       "abi": [
         {
           "type": "impl",
@@ -2663,7 +2512,7 @@
         },
         {
           "type": "impl",
-          "name": "DojoDeployedContractImpl",
+          "name": "ship__DeployedContractImpl",
           "interface_name": "dojo::meta::interface::IDeployedResource"
         },
         {
@@ -2711,10 +2560,6 @@
           "name": "charon::models::ships::Faction",
           "variants": [
             {
-              "name": "Pirates",
-              "type": "()"
-            },
-            {
               "name": "UN",
               "type": "()"
             },
@@ -2724,6 +2569,10 @@
             },
             {
               "name": "KuiperUnion",
+              "type": "()"
+            },
+            {
+              "name": "Pirates",
               "type": "()"
             },
             {
@@ -2984,8 +2833,8 @@
       ]
     },
     {
-      "address": "0x39b0e9a14067cb51eb7ad90d1889054d0c52a9d6d8af79ef8f428bbf5d66ca7",
-      "class_hash": "0x2491d6c40b80f8e70a915e386379cac82a21c1eb6a4840474f5894c1f7980f9",
+      "address": "0x4788057c2fe04f214390511a52f5527fadf1ad3928744d8eacd4570d049f29a",
+      "class_hash": "0x274c949be76417290dcc77d222c2fb5592575548df5fca29c33509f11e96a70",
       "abi": [
         {
           "type": "impl",
@@ -2999,7 +2848,7 @@
         },
         {
           "type": "impl",
-          "name": "DojoDeployedContractImpl",
+          "name": "shipoberon__DeployedContractImpl",
           "interface_name": "dojo::meta::interface::IDeployedResource"
         },
         {
@@ -3242,163 +3091,163 @@
   "models": [
     {
       "members": [],
-      "class_hash": "0x4a3b3624b37b0889c6a4253a10b853b2cd24940ff3c06db8749ab2b2d109e00",
+      "class_hash": "0x139bf4628a69e47429034827858085d5ea0eebd08d984f8a361d109a2e0d2ad",
       "tag": "charon-Asteroid",
       "selector": "0x1619f710bec165e92156fe23ab8e5f5a954d4bcd7340e467005afcacee567a"
     },
     {
       "members": [],
-      "class_hash": "0x343b56dc937db512e7f99632050942bd1948cddf048419fa100081b1d8746dc",
+      "class_hash": "0x2137b18c363e7df8198c6e0b87c24a521b6b6c699c68d9e50b87c68b17a2de0",
       "tag": "charon-Crew",
       "selector": "0x688d34796bb12b7e9e24e290a621615828d16aa9783758d4c2b56c16e2bc976"
     },
     {
       "members": [],
-      "class_hash": "0x1255f4df1a0b7415ba25fda0282e8f84ecede0a0f8a8941dd076da3a10ab026",
+      "class_hash": "0x33ab650a6844010aa711bd5e694233b9b25669dff02267cde397036077ea269",
       "tag": "charon-CrewAbility",
       "selector": "0x6b02d9a92f5a883f3d43778e624c102bfb6cb44eead165c551edd7c9e502025"
     },
     {
       "members": [],
-      "class_hash": "0x37db42a2a4346f7b77c3baae1c5a19a433b69bacbb8e05f7928ec9f9ca1c585",
+      "class_hash": "0x3afbc12eeae2aa8fe08b5efe26a74ddfc6add04de69ad3f39afda1aa9c9d86",
       "tag": "charon-CrewMember",
       "selector": "0x23a06a61fb1a23085b1486e30b874128c21022958e1fbc34957e8e9403d634a"
     },
     {
       "members": [],
-      "class_hash": "0x570db94e0c6b85c223fa98dfaa74e9b40ea0d09a119f0f90ee7d88ed2843f6f",
+      "class_hash": "0x1d63255c407012edb0986acc3f77198cc9e17ef6358a705794c306611183809",
       "tag": "charon-Engagement",
       "selector": "0x7768927fb89ccd7c07fd621252bf4721766a8587f77ce310bde75dfbf6be50f"
     },
     {
       "members": [],
-      "class_hash": "0x33b44c914003d9a8f2b80a0f58770f7c87ea2c1113b8859f99a74f17b3862df",
+      "class_hash": "0x2e82f06df3381beaa71c689ddf3940bdf0c1ad252836f185073fc4ad517141d",
       "tag": "charon-Game",
       "selector": "0x2f05391502678ca2391d3c4092fe333b9b5d496a578b38629854e0a4c0cc543"
     },
     {
       "members": [],
-      "class_hash": "0x6d3e5080c206105341282a938661d4b905ed8e22ecee78ed8e59d7a4dee0014",
+      "class_hash": "0x74e45c371815afef81de5a82a9d9c17e806c1d9fb37b3fa2cc69484a2161285",
       "tag": "charon-MiniZoneShip",
       "selector": "0x121e97b972e0273ba323b2dfd045358db918b01c969ab2b454233521e8251b7"
     },
     {
       "members": [],
-      "class_hash": "0x6f74fc99ff97e6ca6849fcfb4fd05619917a3a52ab501a93f6e2f68441173ae",
+      "class_hash": "0x740d63a61a51dc2485a8cc4454bba452e67e0aa623bf5e8032b87c180e70541",
       "tag": "charon-MiniZoneStation",
       "selector": "0x2ffe8b9e6b4b60088cb1344d231184a877acacf47aa8e078e870948533aebe4"
     },
     {
       "members": [],
-      "class_hash": "0x5d3c95b0700b2225c5296f92d1886f630317f14192ed03e01b71d9c5fd0eb1d",
+      "class_hash": "0xb6ad92e1c77d2cb58f0f98478cb35095ed8c4e64f4cf3aac8b8152d9e6db1a",
       "tag": "charon-Moon",
       "selector": "0x392b541f02ac35847ffdf309255723aab52a672f11644ff79a6127c871b1dc8"
     },
     {
       "members": [],
-      "class_hash": "0x1263b5e3188abf6b810da2230bc6c4cf043d57f7a8232b4cc3f710dd9080db8",
+      "class_hash": "0x3bdf67ec56803d495996011ad48e75154f6ddb91e43715561eebe1bf1cbdec7",
       "tag": "charon-OberonPDC",
       "selector": "0x17ba85b0cffa588d90cbdc6e6c08ccca95b5c5f50a28f23c794d4136b465b57"
     },
     {
       "members": [],
-      "class_hash": "0x7377f16baf83ece8bff88d8633f50483b5ea9824a8456a7a829eea444da6705",
+      "class_hash": "0x3014d23e09f722d742c482b6209858f02b62d21d430ad29f7bb3e474301b2d",
       "tag": "charon-OberonRailgun",
       "selector": "0x4c23abf34bb34997301e2482b74519282226459286039f74061cad8fd1dc2f7"
     },
     {
       "members": [],
-      "class_hash": "0x33b2ac7ae30cd3b48bd8bd4afb52132aa958a8b216d6d7d4dccec7a04a8f7f2",
+      "class_hash": "0x139707a0500e4d6e5c396400c4670dbf363d4efd370d34e4e600187d35d4bdf",
       "tag": "charon-OberonScanResult",
       "selector": "0x27761fbee14957423583fc4ac40fa3778d31ff90c51e576e046c8a612872d5f"
     },
     {
       "members": [],
-      "class_hash": "0x1987694e3c3c267e146abc581c810d014fbf629a0311bde816ad2b134f9003a",
+      "class_hash": "0x7b514c0ca4ee5337ddbb5a73fc58089629975667dc5fa2a7fc7c10ada4649d6",
       "tag": "charon-OberonScanner",
       "selector": "0x79b326b68509329fcc36d4debcd8d0f1be2d66cf035b3356e4cb2badc588bb1"
     },
     {
       "members": [],
-      "class_hash": "0x5621aa15e1cbbdcd26822c56f4a5e4624e0389aa1c731d3c234707b5410de6c",
+      "class_hash": "0x2f8f5c59fa3797b57ae668ca8ea0ed50bf41f060ff6260c0dc1d0def6224f83",
       "tag": "charon-OberonShield",
       "selector": "0x67c544722b3cb60b2b295fe475d3c219f00fb1dd6ee3610df0f8108e24d836a"
     },
     {
       "members": [],
-      "class_hash": "0x2ee70f9bea162ffb0ad1aa076e6f287f2f86975d0609681bf3c583c3d82c9d0",
+      "class_hash": "0x3e26be2e20655d35b6a40efa4c0bc4e6cc58b7a2e7c2bc42f0a529778061ca1",
       "tag": "charon-OberonTorpedo",
       "selector": "0x49d71e465d03984c06cf975093297b5ad51122c1f303331cc68da1c936dc115"
     },
     {
       "members": [],
-      "class_hash": "0x6d87f1d9d2968138250873000930809f788586ef15f79fda91627974eee655e",
+      "class_hash": "0x16627586add22afee3bbbcb85a56a056cc48ef5bd1837ca9344cfb9ee3ab7df",
       "tag": "charon-PDC",
       "selector": "0x3b171ad96fafeeb412e1975a85054dc6bb1b7fd12926f4b5240f16ddcc4e27e"
     },
     {
       "members": [],
-      "class_hash": "0x52634661dc005136c5230316c79603085f41d4c76b752ddc7ed128e43300b8f",
+      "class_hash": "0x58170a5cac5836315947ae864b39dddf2d2c0e5eafa07b8523fcbbe2bdcbbec",
       "tag": "charon-Planet",
       "selector": "0x7a089d8da0b117228a5a711366f004ca2792f867b21a42ec0e59cce80db7ac9"
     },
     {
       "members": [],
-      "class_hash": "0x6433bcae6e939772b810a09c6fd17b9482777c67635980201a8eeb3a104ef23",
+      "class_hash": "0x2874657ba7f72243e7dd1d805f9b02a238ddd795a80f7e9ee401aa08855e7f8",
       "tag": "charon-Railgun",
       "selector": "0x6a8c7fbe81fa05b2e82367fc73c8651711be9cd95a6ed6db991b2c1254917f3"
     },
     {
       "members": [],
-      "class_hash": "0x2b29b4dddb4588c1f1c4fef81404dd6bab54d29e4a5a9ed6d59066f529fd5e3",
+      "class_hash": "0x168286881db1ad98857bb307929445b7e9432c702869a00f3687f8bf68846c3",
       "tag": "charon-ScanResult",
       "selector": "0x73df2cc80ed0686795c1511bd52b8b8acc3633523a5bae120776b8fa31d1902"
     },
     {
       "members": [],
-      "class_hash": "0x5b744eb4deb0e8120b4f46a772108b7c6611a485a4bdc398dbf6017de3be2ca",
+      "class_hash": "0x803b6bfee1168381b448d381310b44f446619e28bd92ec82c075717873f73f",
       "tag": "charon-Scanner",
       "selector": "0x249f74398ff09c48d79133d377bfa79f973731394b5dc3c9cc27a0a3d6b0399"
     },
     {
       "members": [],
-      "class_hash": "0x697833c99cc902b02fcf19a599eb5f68b6c0f6308d68ef71982dfac2999b8c9",
+      "class_hash": "0x23fbfd4434d3faa20fe7f1548b0ccdb7661a4f966662d2d2ed93fba8456ead1",
       "tag": "charon-Shield",
       "selector": "0x2169417b9fb2df17fcb8a433604b1aeb071b6fb1d81913c8be5af71c9a0b07c"
     },
     {
       "members": [],
-      "class_hash": "0x56adace1d41594743f94ec746f24eecb5b01e481682ea737610fa3b261fe72d",
+      "class_hash": "0x1408830100090e11f574feed15e8934b3781c1c364af4bdc5c3b859c75c30e6",
       "tag": "charon-Ship",
       "selector": "0x36ccd4776bc75971b412e32e4586b38bc5a9f4112ed19c3d20f790ed281a215"
     },
     {
       "members": [],
-      "class_hash": "0x229ef77c3076dde6024fef4bedf70a63d5208d182e61c95df71ff86f05519aa",
+      "class_hash": "0x229f1ad94ab0509720aac2ca2aa6b02334d85d7584ea9283d73a1a2c23ea6dc",
       "tag": "charon-ShipArmament",
       "selector": "0x6436114e94f0acf29deb30f7e6340f136639e1b50021152de15e06ad51f3f43"
     },
     {
       "members": [],
-      "class_hash": "0x1d1d8c52dee4a502792f235d94c216d6d35f4c9aa483196839c8d440c74b264",
+      "class_hash": "0x69298279dce1340c6e780fe10b3ee4a05011c8d3a8c281623602d85408b2a33",
       "tag": "charon-ShipOberon",
       "selector": "0x4d15c02039aa2bdac6c13843b871bb8526ef3b46e53cf243f9619dd3125d45e"
     },
     {
       "members": [],
-      "class_hash": "0x4ac1452e7e7d860392fdae411fe734acb750d8b02d30c8d882720f235cb52c4",
+      "class_hash": "0x68adfc600b452458c764d0946c1a5acc264ecc576047cc9526660060a2e3e28",
       "tag": "charon-Station",
       "selector": "0x405552fbe6a160033db7dea6e0c5448d32ec9f36a510714ca9d2ea26c93dbc2"
     },
     {
       "members": [],
-      "class_hash": "0x78b96ad07930af5678b467ba6641a1aa491f0310874fa946fdae31cc8a81f9d",
+      "class_hash": "0x4b3432057461e9885af59b23a61e03462b56964d30496cb4f8c7efddd4cde5a",
       "tag": "charon-Torpedo",
       "selector": "0x7ac05517aa75690a48e8e7564d7986e7dc6db97c7d2d673f8dbc61441d72847"
     },
     {
       "members": [],
-      "class_hash": "0x32b4dab14bcb5498960a0a75d7fda8dfa6773d3cecf0b2d8d3b6e84c04a9d4f",
+      "class_hash": "0x137c20bd5dd145d5935f80c711a9439b97a21c995c7801e083f6315fd992748",
       "tag": "charon-Zone",
       "selector": "0x5c13dbce786044fdbb77b2e4da0160e91e19d7785cfff034a074bc4695be8ca"
     }

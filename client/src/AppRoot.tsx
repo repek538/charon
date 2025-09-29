@@ -1,16 +1,17 @@
 import React, { useState } from 'react';
-import type { Network } from "./utils/charon";
+import type { Network, PlayMode } from "./utils/charon";
 import { OnboardingProvider } from "./context/OnboardingContext";
-import AppInitializer from "./components/AppInitializer";
-import NetworkSelector from './components/NetworkSelector';
-import LandingPage from './components/LandingPage';
 import { client } from "./dojogen/contracts.gen";
-import { StarknetProvider } from './providers';
 import { NetworkProvider } from './context/NetworkContext';
+import AppInitializer from './componets/AppInitializer';
+import NetworkSelector from './componets/NetworkSelector';
+import LandingPage from './componets/LandingPage';
+import { StarknetProvider } from './providers/starknet_provider';
 
 const AppRoot: React.FC = () => {
   const [showLanding, setShowLanding] = useState(true);
   const [selectedNetwork, setSelectedNetwork] = useState<Network | null>(null);
+  const [selectedMode, setSelectedMode] = useState<PlayMode | null>(null)
   
   // If showing landing page
   if (showLanding) {
@@ -21,6 +22,8 @@ const AppRoot: React.FC = () => {
   if (!selectedNetwork) {
     return <NetworkSelector onNetworkSelected={(network) => setSelectedNetwork(network)} />;
   }
+
+ 
   
   // Once network is selected, render the app with all providers
   return (

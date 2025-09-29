@@ -23,7 +23,8 @@ pub trait IShipOberon<T> {
         fuel: u32,
         cargo: u32,
         location_x: u32,
-        location_y: u32
+        location_y: u32,
+        power_output: u16
     );
 }
 
@@ -60,7 +61,8 @@ pub mod  shipoberon {
             fuel: u32,
             cargo: u32,
             location_x: u32,
-            location_y: u32 
+            location_y: u32 ,
+            power_output: u16
         ){
             let mut world = self.world_default();
             let owner = get_caller_address();
@@ -86,7 +88,8 @@ pub mod  shipoberon {
                 crew_capacity,
                 fuel,
                 cargo,
-                location
+                location,
+                power_output
             );
 
             // Create scanner system

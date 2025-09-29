@@ -1,5 +1,6 @@
 use starknet::ContractAddress;
-use charon::models::ships::{ShipClass};
+use charon::models::ships::{ShipClass,Faction};
+use charon::models::stations::{StationType};
 
 #[derive(Copy, Drop, Serde, Debug)]
 #[dojo::model]
@@ -34,6 +35,8 @@ pub struct ShipOberon {
     pub crew_capacity: u16,      // Max crew size
     pub fuel: u32,               // Fuel level for movement
     pub cargo: u32,              // Cargo capacity (for resources)
+    pub power_output: u16,
+    pub power_available: u16,
 
     pub location: Vec2,
     pub state: ShipState,
@@ -82,18 +85,45 @@ pub struct OberonScanner {
 pub struct OberonScanResult {
     #[key]
     pub ship: ContractAddress, 
-    pub detection_time: u32,         // Game turn when detected
+    pub detection_time: u64,         // Game turn when detected
     pub confidence: u8,              // 0-100 accuracy of scan data
     pub distance: u32,               // Range to target in km
     pub bearing: u16,                // 0-359 degrees
     pub velocity: u16,               // Target speed
-    pub ship_class_known: bool,      // Whether ship class is identified
-    pub faction_known: bool,         // Whether faction is identified
+    pub ship_class_known: ShipClass,      // Whether ship s_class is identified
+    pub faction_known: Faction,         // Whether faction is identified
     pub armament_known: bool,        // Whether weapons are identified
     pub hull_status_known: bool,     // Whether damage state is known
     pub shield_status_known: bool,   // Whether shield state is known
     pub is_stealthed: bool,          // Whether target is using stealth
-    pub last_updated: u32,           // Last turn this data was refreshed
+    pub last_updated: u64,           // Last turn this data was refreshed
+    pub vessel: ContractAddress,
+    pub station: u64,
+}
+
+#[derive(Copy, Drop, Serde, Debug)]
+#[dojo::model]
+pub struct StationScanResult {
+    #[key]
+    pub scanner_ship: ContractAddress,  // Ship doing the scanning
+    pub station_id: u64,                // Station being scanned
+    pub detection_time: u64,            // Game turn when detected
+    pub confidence: u8,                 // 0-100 accuracy of scan data
+    pub distance: u32,                  // Range to station in km
+    
+    // Station-specific scan data
+    pub station_type_known: StationType,       // Whether type is identified
+    pub owner_known: bool,              // Whether owner is identified
+    pub defense_level_known: bool,      // Whether defenses are known
+    pub capacity_known: bool,           // Whether capacity is known
+    pub crew_count_known: bool,         // Whether crew count is known
+    
+    // Approximate data (if not fully known)
+    pub approx_defense_level: u16,      // Estimated defenses
+    pub approx_capacity: u32,           // Estimated capacity
+    
+    pub is_hostile: bool,               // Whether station is hostile
+    pub last_updated: u64,              // Last turn data was refreshed
 }
 
 #[derive(Copy, Drop, Serde, Debug)]
@@ -101,7 +131,7 @@ pub struct OberonScanResult {
 pub struct OberonRailgun {
     #[key]
     pub ship: ContractAddress, 
-    pub damage: u16,                 // 150-300 depending on class
+    pub damage: u16,                 // 150-300 depending on s_class
     pub max_range: u32,              // 2000km
     pub optimal_range: u32,          // 800km
     pub rate_of_fire: u8,            // 1 shot per turn
@@ -333,6 +363,7 @@ pub impl ShipOberonImpl of ShipOberonTrait {
         fuel: u32,
         cargo: u32,
         location: Vec2,
+        power_output: u16
     ) -> ShipOberon {
 
         ShipOberon {
@@ -347,8 +378,10 @@ pub impl ShipOberonImpl of ShipOberonTrait {
             crew_capacity,
             fuel,
             cargo,
+            power_output,
             location,
-            state: ShipState::Idle
+            state: ShipState::Idle,
+            power_available: power_output
         }
     }
 
@@ -401,7 +434,7 @@ pub impl ShipOberonImpl of ShipOberonTrait {
 
     #[inline(always)]
     fn calculate_fuel_consumption(self: ShipOberon, distance: u32) -> u32 {
-        // Oberon-class is a light freighter, relatively efficient
+        // Oberon-s_class is a light freighter, relatively efficient
         let base_consumption = distance / 15; // Better fuel efficiency than warships
         
         // Cargo affects fuel consumption
@@ -1227,5 +1260,374 @@ pub impl OberonShieldImpl of OberonShieldTrait {
         } else {
             self.coverage * self.generator_health / 100
         }
+    }
+}
+
+#[generate_trait]
+pub impl OberonScanResultImpl of OberonScanResultTrait {
+    /// Creates a new scan result with basic detection data
+    fn new(
+        ship: ContractAddress,
+        vessel: ContractAddress,
+        detection_time: u64,
+        distance: u32,
+        bearing: u16,
+        confidence: u8,
+        station: u64,
+    ) -> OberonScanResult {
+        OberonScanResult {
+            ship,
+            vessel,
+            detection_time,
+            confidence,
+            distance,
+            bearing,
+            velocity: 0,
+            ship_class_known: ShipClass::None,
+            faction_known: Faction::None,
+            armament_known: false,
+            hull_status_known: false,
+            shield_status_known: false,
+            is_stealthed: false,
+            last_updated: detection_time,
+            station
+        }
+    }
+
+    /// Updates the scan data with new information
+    fn update_scan_data(
+        ref self: OberonScanResult,
+        velocity: u16,
+        new_confidence: u8,
+        current_turn: u64
+    ) {
+        self.velocity = velocity;
+        self.confidence = new_confidence;
+        self.last_updated = current_turn;
+    }
+
+
+    fn reveal_armament(ref self: OberonScanResult) {
+        self.armament_known = true;
+    }
+
+    fn reveal_hull_status(ref self: OberonScanResult) {
+        self.hull_status_known = true;
+    }
+
+    fn reveal_shield_status(ref self: OberonScanResult) {
+        self.shield_status_known = true;
+    }
+
+    /// Updates position data (distance and bearing)
+    fn update_position(
+        ref self: OberonScanResult,
+        new_distance: u32,
+        new_bearing: u16,
+        current_turn: u64
+    ) {
+        self.distance = new_distance;
+        self.bearing = new_bearing;
+        self.last_updated = current_turn;
+    }
+
+    /// Checks if the scan data is stale (older than specified turns)
+    fn is_stale(self: @OberonScanResult, current_turn: u64, max_age: u64) -> bool {
+        current_turn - *self.last_updated > max_age
+    }
+
+    /// Checks if this is a complete scan (all information known)
+    fn is_complete_scan(self: @OberonScanResult) -> bool {
+        *self.ship_class_known != ShipClass::None
+            && *self.faction_known  != Faction::None
+            && *self.armament_known 
+            && *self.hull_status_known 
+            && *self.shield_status_known
+    }
+
+    /// Gets the scan quality level based on confidence and known information
+    fn get_scan_quality(self: @OberonScanResult) -> u8 {
+        let mut quality = *self.confidence;
+        
+        // Bonus for known information
+        if *self.ship_class_known != ShipClass::None { quality += 5; }
+        if *self.faction_known != Faction::None { quality += 5; }
+        if *self.armament_known { quality += 10; }
+        if *self.hull_status_known { quality += 10; }
+        if *self.shield_status_known { quality += 10; }
+        
+        // Cap at 100
+        if quality > 100 { 100 } else { quality }
+    }
+
+    /// Checks if target is within engagement range
+    fn is_in_range(self: @OberonScanResult, max_range: u32) -> bool {
+        *self.distance <= max_range
+    }
+
+    /// Sets stealth status
+    fn set_stealth_status(ref self: OberonScanResult, is_stealthed: bool) {
+        self.is_stealthed = is_stealthed;
+    }
+
+    /// Gets relative bearing (useful for tactical calculations)
+    fn get_relative_bearing(self: @OberonScanResult, own_heading: u16) -> u16 {
+        let relative = if *self.bearing >= own_heading {
+            *self.bearing - own_heading
+        } else {
+            360 - own_heading + *self.bearing
+        };
+        relative % 360
+    }
+
+    /// Estimates time to intercept based on current velocity and distance
+    fn estimate_intercept_time(
+        self: @OberonScanResult, 
+        own_velocity: u16, 
+        target_heading: u16
+    ) -> Option<u64> {
+        if *self.velocity == 0 && own_velocity == 0 {
+            return Option::None;
+        }
+        
+        // Simplified calculation - in reality would need vector math
+        let relative_velocity = if own_velocity > *self.velocity {
+            own_velocity - *self.velocity
+        } else {
+            return Option::None; // Can't intercept
+        };
+        
+        Option::Some((*self.distance / relative_velocity.into()).into())
+    }
+}
+
+#[generate_trait]
+pub impl StationScanResultImpl of StationScanResultTrait {
+    /// Creates a new station scan result with basic detection data
+    fn new(
+        scanner_ship: ContractAddress,
+        station_id: u64,
+        detection_time: u64,
+        distance: u32,
+        confidence: u8,
+    ) -> StationScanResult {
+        StationScanResult {
+            scanner_ship,
+            station_id,
+            detection_time,
+            confidence,
+            distance,
+            station_type_known: StationType::None,
+            owner_known: false,
+            defense_level_known: false,
+            capacity_known: false,
+            crew_count_known: false,
+            approx_defense_level: 0,
+            approx_capacity: 0,
+            is_hostile: false,
+            last_updated: detection_time,
+        }
+    }
+
+    /// Updates the scan data with new confidence level
+    fn update_scan_data(
+        ref self: StationScanResult,
+        new_confidence: u8,
+        current_turn: u64
+    ) {
+        self.confidence = new_confidence;
+        self.last_updated = current_turn;
+    }
+
+
+
+    /// Reveals station owner information
+    fn reveal_owner(ref self: StationScanResult) {
+        self.owner_known = true;
+    }
+
+    /// Reveals defense level information
+    fn reveal_defense_level(ref self: StationScanResult, actual_defense: u16) {
+        self.defense_level_known = true;
+        self.approx_defense_level = actual_defense;
+    }
+
+    /// Reveals capacity information
+    fn reveal_capacity(ref self: StationScanResult, actual_capacity: u32) {
+        self.capacity_known = true;
+        self.approx_capacity = actual_capacity;
+    }
+
+    /// Reveals crew count information
+    fn reveal_crew_count(ref self: StationScanResult) {
+        self.crew_count_known = true;
+    }
+
+    /// Updates distance to station
+    fn update_distance(
+        ref self: StationScanResult,
+        new_distance: u32,
+        current_turn: u64
+    ) {
+        self.distance = new_distance;
+        self.last_updated = current_turn;
+    }
+
+    /// Updates approximate defense level (from partial scan)
+    fn update_approx_defense(
+        ref self: StationScanResult,
+        estimated_defense: u16,
+        current_turn: u64
+    ) {
+        self.approx_defense_level = estimated_defense;
+        self.last_updated = current_turn;
+    }
+
+    /// Updates approximate capacity (from partial scan)
+    fn update_approx_capacity(
+        ref self: StationScanResult,
+        estimated_capacity: u32,
+        current_turn: u64
+    ) {
+        self.approx_capacity = estimated_capacity;
+        self.last_updated = current_turn;
+    }
+
+    /// Sets hostile status
+    fn set_hostile_status(ref self: StationScanResult, is_hostile: bool) {
+        self.is_hostile = is_hostile;
+    }
+
+    /// Checks if the scan data is stale (older than specified turns)
+    fn is_stale(self: @StationScanResult, current_turn: u64, max_age: u64) -> bool {
+        current_turn - *self.last_updated > max_age
+    }
+
+    /// Checks if this is a complete scan (all information known)
+    fn is_complete_scan(self: @StationScanResult) -> bool {
+        *self.station_type_known != StationType::None
+            && *self.owner_known
+            && *self.defense_level_known
+            && *self.capacity_known
+            && *self.crew_count_known
+    }
+
+    /// Gets the scan quality level based on confidence and known information
+    fn get_scan_quality(self: @StationScanResult) -> u8 {
+        let mut quality = *self.confidence;
+        
+        // Bonus for known information
+        if *self.station_type_known != StationType::None { quality += 10; }
+        if *self.owner_known { quality += 10; }
+        if *self.defense_level_known { quality += 15; }
+        if *self.capacity_known { quality += 10; }
+        if *self.crew_count_known { quality += 5; }
+        
+        // Cap at 100
+        if quality > 100 { 100 } else { quality }
+    }
+
+    /// Checks if station is within docking range
+    fn is_in_docking_range(self: @StationScanResult, max_range: u32) -> bool {
+        *self.distance <= max_range
+    }
+
+    /// Checks if station is within weapons range
+    fn is_in_weapons_range(self: @StationScanResult, max_range: u32) -> bool {
+        *self.distance <= max_range
+    }
+
+    /// Checks if station appears to be a threat based on known data
+    fn is_potential_threat(self: @StationScanResult) -> bool {
+        if *self.is_hostile {
+            return true;
+        }
+
+        // If we know defense level and it's high, consider it a potential threat
+        if *self.defense_level_known && *self.approx_defense_level > 500 {
+            return true;
+        }
+
+        // If we have approximate defense data suggesting high defenses
+        if !*self.defense_level_known && *self.approx_defense_level > 300 {
+            return true;
+        }
+
+        false
+    }
+
+    /// Calculates estimated time to reach station at given velocity
+    fn estimate_arrival_time(
+        self: @StationScanResult,
+        ship_velocity: u16
+    ) -> Option<u64> {
+        if ship_velocity == 0 {
+            return Option::None;
+        }
+
+        // Calculate turns to reach station
+        let turns = (*self.distance / ship_velocity.into()).into();
+        Option::Some(turns)
+    }
+
+    /// Checks if station is safe to approach based on scan data
+    fn is_safe_to_approach(self: @StationScanResult) -> bool {
+        // If hostile, not safe
+        if *self.is_hostile {
+            return false;
+        }
+
+        // If we don't know the owner, be cautious
+        if !*self.owner_known {
+            return false;
+        }
+
+        // If defense level is unknown or very high, be cautious
+        if *self.defense_level_known && *self.approx_defense_level > 1000 {
+            return false;
+        }
+
+        true
+    }
+
+    /// Gets scan completeness percentage
+    fn get_scan_completeness(self: @StationScanResult) -> u8 {
+        let mut complete_fields = 0_u8;
+        let total_fields = 5_u8;
+
+        if *self.station_type_known != StationType::None { complete_fields += 1; }
+        if *self.owner_known { complete_fields += 1; }
+        if *self.defense_level_known { complete_fields += 1; }
+        if *self.capacity_known { complete_fields += 1; }
+        if *self.crew_count_known { complete_fields += 1; }
+
+        (complete_fields * 100) / total_fields
+    }
+
+    /// Checks if station is likely a military installation
+    fn appears_military(self: @StationScanResult) -> bool {
+        // High defense level suggests military
+        if *self.defense_level_known && *self.approx_defense_level > 800 {
+            return true;
+        }
+
+        // High approximate defenses suggest military
+        if !*self.defense_level_known && *self.approx_defense_level > 600 {
+            return true;
+        }
+
+        false
+    }
+
+    /// Checks if station is likely a trade hub
+    fn appears_trade_hub(self: @StationScanResult) -> bool {
+        // High capacity with moderate defenses suggests trade
+        if *self.capacity_known && *self.approx_capacity > 10000 {
+            if *self.defense_level_known && *self.approx_defense_level < 500 {
+                return true;
+            }
+        }
+
+        false
     }
 }

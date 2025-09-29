@@ -1,5 +1,7 @@
-use starknet::ContractAddress;
-use charon::models::oberon::{ShipOberon,OberonScanner};
+use core::circuit::u384;
+use starknet::ContractAddress;use crate::systems::oberon;
+
+use charon::models::oberon::{ShipOberon,OberonScanner,OberonScanResult,OberonScanResultTrait,StationScanResult,StationScanResultTrait};
 use charon::models::zones::{Zone,ZoneType,ZoneTypeTrait};
 use charon::models::stations::{Station,MiniZoneStation,MiniZoneStationTrait,};
 use charon::models::ships::{Ship,Scanner,MiniZoneShip,MiniZoneShipTrait,Vec2};
@@ -18,11 +20,23 @@ pub trait IActions<T> {
     // === SCANNING ACTIONS ===
     fn passive_scan(
         ref self: T,
+        game_id: u32,
+        location_x: u32,
+        location_y: u32,
     ); // Returns detected ships
     
     fn active_scan(
         ref self: T,
+        game_id: u32,
         target_ship: ContractAddress,
+        
+    ); // Returns if scan was successful
+
+    fn active_scan_station(
+        ref self: T,
+        game_id: u32,
+        target_station: u64,
+        
     ); // Returns if scan was successful
     
     // fn detailed_scan(
@@ -233,7 +247,11 @@ pub mod actions {
         MiniZoneShip,
         MiniZoneShipTrait,
         Game,
-        GameTrait
+        GameTrait,
+        OberonScanResult,
+        OberonScanResultTrait,
+        StationScanResult,
+        StationScanResultTrait
     };
 
     use starknet::{ContractAddress, get_caller_address,get_block_timestamp};
@@ -243,6 +261,8 @@ pub mod actions {
     use dojo::event::EventStorage;
 
     use core::num::traits::Zero;
+
+    use charon::utils::{is_within_range_squared};
     
 
 
@@ -261,8 +281,8 @@ pub mod actions {
         // Get the address of the current caller, possibly the player's address.
         let player = get_caller_address();
 
-        let existing_ship: ShipOberon = world.read_model(player);
-        assert(existing_ship.point_defense == 0, 'Ship already exists');
+        let player_ship: ShipOberon = world.read_model(player);
+        assert(player_ship.point_defense == 0, 'Ship already exists');
 
         // before making the move lets find assets in the minizone 
 
@@ -289,7 +309,7 @@ pub mod actions {
 
             let enemy_ship_scanner: Scanner = world.read_model(enemy_ship.id);
 
-            let oberon_scanner: OberonScanner = world.read_model(existing_ship.ship);
+            let oberon_scanner: OberonScanner = world.read_model(player_ship.ship);
 
             let engagement_range = enemy_ship_scanner.max_range + oberon_scanner.max_range;
 
@@ -297,13 +317,13 @@ pub mod actions {
             let engagement  = EngagementTrait::new(
                 player,
                 engagement_id,
-                player_ship_id: existing_ship.ship,
+                player_ship_id: player_ship.ship,
                 enemy_ship_id: enemy_ship.id,
                 current_time: current_time,
                 engagement_range: engagement_range,
-                player_hull: existing_ship.hull,
+                player_hull: player_ship.hull,
                 enemy_hull: enemy_ship.hull_points,
-                player_shields: existing_ship.shield,
+                player_shields: player_ship.shield,
                 enemy_shields: enemy_ship.shield_points,
             );
 
@@ -322,13 +342,178 @@ pub mod actions {
 
         fn passive_scan(
              ref self: ContractState,
+             game_id: u32,
+            location_x: u32,
+            location_y: u32,
         ){
+                    // Get the default world.
+                let mut world = self.world_default();
+
+                // Get the address of the current caller, possibly the player's address.
+                let player = get_caller_address();
+
+                let player_ship: ShipOberon = world.read_model(player);
+                assert(player_ship.point_defense == 0, 'Ship already exists');
+
+                // before making the move lets find assets in the minizone 
+
+                let main_zone_type: ZoneType = ZoneTypeTrait::from_coordinates(location_x,location_y);
+
+                let mini_zone_id = main_zone_type.get_global_mini_zone_id(location_x,location_y);
+
+                // check for any ships 
+
+                let mini_zone_ship: MiniZoneShip = world.read_model(mini_zone_id);
+
+                let mini_zone_station: MiniZoneStation = world.read_model(mini_zone_id);
+
+                let current_time = get_block_timestamp();
+
+                let mut game: Game =  world.read_model(game_id);
+
+                if (mini_zone_ship.ship != Zero::zero() && mini_zone_ship.is_active){
+
+                        let enemy_ship: Ship = world.read_model(mini_zone_ship.ship);
+
+
+                        let oberon_scanner: OberonScanner = world.read_model(player_ship.ship);
+
+                        assert(oberon_scanner.scanner_health > 0, 'Scanner Damaged');
+
+                        // if there is power to scan - passive scaner
+                        if player_ship.power_available > oberon_scanner.power_cost{
+
+                            let enemy_stealth_rating: u8 = (enemy_ship.shield_points % 100).try_into().unwrap();
+                            
+                            if oberon_scanner.stealth_detection >= enemy_stealth_rating {
+                                // Ship detected! Add to scanner result 
+
+                                let mut scanner_result = OberonScanResultTrait::new(
+                                    ship: player_ship.ship,
+                                    vessel: enemy_ship.id,
+                                    detection_time: current_time,
+                                    distance: 0, // will have to look into this 
+                                    bearing: 0,
+                                    confidence: 0,
+                                    station: 0,
+                                );
+
+                                if (mini_zone_station.station != Zero::zero() && mini_zone_station.is_active){
+
+                                    let station: Station = world.read_model(mini_zone_station.station);
+
+                                    scanner_result.station = station.id;
+
+                                    let station_scan_res = StationScanResultTrait::new(
+                                        scanner_ship:  player_ship.ship,
+                                        station_id: mini_zone_station.station,
+                                        detection_time: current_time,
+                                        distance: 0,
+                                        confidence: oberon_scanner.scanner_health,
+                                    );
+
+                                    world.write_model(@scanner_result);
+
+                                    world.write_model(@station_scan_res);
+
+                                }
+                                
+                            }
+
+                        }
+
+
+
+
+                        
+
+                        
+
+                     
+
+        }
+
+
         }
 
        fn active_scan(
             ref self: ContractState,
+            game_id: u32,
             target_ship: ContractAddress,
-        ) { // Returns if scan was successful
+        ) { 
+
+                // Get the default world.
+                let mut world = self.world_default();
+
+                // Get the address of the current caller, possibly the player's address.
+                let player = get_caller_address();
+
+                let player_ship: ShipOberon = world.read_model(player);
+                assert(player_ship.point_defense == 0, 'Ship already exists');
+
+                let oberon_scanner: OberonScanner = world.read_model(player_ship.ship);
+
+                let current_time = get_block_timestamp();
+
+
+                assert(oberon_scanner.scanner_health > 0, 'Scanner Damaged');
+
+                // if there is power to scan - passive scaner
+                if player_ship.power_available > oberon_scanner.power_cost{
+
+                    let target_e_ship: Ship =  world.read_model(target_ship);
+
+                    let mut  passive_scan_res: OberonScanResult = world.read_model(player_ship.ship);
+
+
+                            passive_scan_res.confidence = oberon_scanner.scanner_health;
+                            passive_scan_res.ship_class_known = target_e_ship.s_class;
+                            passive_scan_res.faction_known = target_e_ship.faction;
+                            passive_scan_res.armament_known = true;        
+                            passive_scan_res.hull_status_known = true;   
+                            passive_scan_res.shield_status_known = true; 
+                            passive_scan_res.is_stealthed = true;           
+                            passive_scan_res.last_updated = current_time;   
+                            world.write_model(@passive_scan_res);        
+
+                }
+
+
+        }
+
+        fn active_scan_station(
+            ref self: ContractState,
+            game_id: u32,
+            target_station: u64,
+            
+        ){
+
+               // Get the default world.
+                let mut world = self.world_default();
+
+                // Get the address of the current caller, possibly the player's address.
+                let player = get_caller_address();
+
+                let player_ship: ShipOberon = world.read_model(player);
+                assert(player_ship.point_defense == 0, 'Ship already exists');
+
+                let oberon_scanner: OberonScanner = world.read_model(player_ship.ship);
+
+                let current_time = get_block_timestamp();
+
+
+                assert(oberon_scanner.scanner_health > 0, 'Scanner Damaged');
+
+                // if there is power to scan - passive scaner
+                if player_ship.power_available > oberon_scanner.power_cost {
+
+                     let target_e_station: Station =  world.read_model(target_station);
+
+
+
+
+
+                 }
         }
         
     }

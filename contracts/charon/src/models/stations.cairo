@@ -18,6 +18,7 @@ pub struct Station {
 #[derive(Serde, Copy, Drop, Introspect, PartialEq, Debug, DojoStore, Default)]
 pub enum StationType {
     #[default]
+    None,
     Shipyard,     // Build/repair ships
     TradeHub,     // Marketplace for goods
     MiningOutpost,// Refines asteroid/planet resources
@@ -73,6 +74,7 @@ pub impl StationImpl of StationTrait {
             StationType::MiningOutpost => 25,
             StationType::RelayStation => 20,
             StationType::SmugglerDen => 15,
+            StationType::None => 0,
         }
     }
 
@@ -87,6 +89,7 @@ pub impl StationImpl of StationTrait {
             StationType::ResearchLab => 2000,
             StationType::SmugglerDen => 1500,
             StationType::RelayStation => 1000,
+            StationType::None => 0,
         }
     }
 
@@ -101,6 +104,7 @@ pub impl StationImpl of StationTrait {
             StationType::MiningOutpost => 500,
             StationType::RelayStation => 200,
             StationType::SmugglerDen => 100,
+            StationType::None => 0,
         }
     }
 
@@ -150,6 +154,7 @@ pub impl StationImpl of StationTrait {
             StationType::MiningOutpost => 100,
             StationType::RelayStation => 50,
             StationType::SmugglerDen => 25,
+            StationType::None => 0,
         }
     }
 
