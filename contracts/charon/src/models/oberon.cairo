@@ -40,6 +40,8 @@ pub struct ShipOberon {
 
     pub location: Vec2,
     pub state: ShipState,
+    pub morarity: u8, // 0 - 100 - 0 -worse -100 good
+    
 }
 
 #[derive(Serde, Copy, Drop, Introspect, PartialEq, Debug, DojoStore, Default)]
@@ -381,7 +383,8 @@ pub impl ShipOberonImpl of ShipOberonTrait {
             power_output,
             location,
             state: ShipState::Idle,
-            power_available: power_output
+            power_available: power_output,
+            morarity: 0
         }
     }
 

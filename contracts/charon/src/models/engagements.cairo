@@ -13,7 +13,7 @@ pub struct Engagement {
     pub initiated_at: u64,              // Block timestamp
     pub phase_deadline: u64,            // When player must respond
     pub player_action: PlayerAction,    // Last action taken
-    pub enemy_action: EnemyAction,      // Enemy's response/action
+    pub enemy_action: NPSAction,      // Enemy's response/action
     pub engagement_range: u32,          // Distance between ships in km
     pub player_hull: u32,              // Current hull points
     pub enemy_hull: u32,               // Enemy hull points
@@ -56,7 +56,7 @@ pub enum PlayerAction {
 }
 
 #[derive(Serde, Copy, Drop, Introspect, PartialEq, Debug, DojoStore, Default)]
-pub enum EnemyAction {
+pub enum NPSAction {
     #[default]
     None,                    // Contact attempt
     Demand,                   // Make demands
@@ -122,7 +122,7 @@ pub impl EngagementImpl of EngagementTrait {
             initiated_at: current_time,
             phase_deadline: current_time + 30, // 30 second response time
             player_action: PlayerAction::None,
-            enemy_action: EnemyAction::Hail,
+            enemy_action: NPSAction::Hail,
             engagement_range,
             player_hull,
             enemy_hull,
@@ -175,44 +175,44 @@ pub impl EngagementImpl of EngagementTrait {
     }
 
     #[inline(always)]
-    fn calculate_enemy_response(self: Engagement, player_action: PlayerAction) -> EnemyAction {
+    fn calculate_enemy_response(self: Engagement, player_action: PlayerAction) -> NPSAction {
         match (self.current_phase, player_action) {
             // Initial contact responses
-            (EngagementPhase::Initial, PlayerAction::Hail) => EnemyAction::Demand,
-            (EngagementPhase::Initial, PlayerAction::Threaten) => EnemyAction::Threaten,
-            (EngagementPhase::Initial, PlayerAction::OpenFire) => EnemyAction::OpenFire,
-            (EngagementPhase::Initial, PlayerAction::Burn) => EnemyAction::OpenFire,
+            (EngagementPhase::Initial, PlayerAction::Hail) => NPSAction::Demand,
+            (EngagementPhase::Initial, PlayerAction::Threaten) => NPSAction::Threaten,
+            (EngagementPhase::Initial, PlayerAction::OpenFire) => NPSAction::OpenFire,
+            (EngagementPhase::Initial, PlayerAction::Burn) => NPSAction::OpenFire,
             
             // Threatened phase responses
-            (EngagementPhase::Threatened, PlayerAction::Comply) => EnemyAction::Rob,
-            (EngagementPhase::Threatened, PlayerAction::PayBribe) => EnemyAction::AcceptBribe,
-            (EngagementPhase::Threatened, PlayerAction::Negotiate) => EnemyAction::Negotiate,
-            (EngagementPhase::Threatened, PlayerAction::OpenFire) => EnemyAction::OpenFire,
-            (EngagementPhase::Threatened, PlayerAction::Burn) => EnemyAction::OpenFire,
+            (EngagementPhase::Threatened, PlayerAction::Comply) => NPSAction::Rob,
+            (EngagementPhase::Threatened, PlayerAction::PayBribe) => NPSAction::AcceptBribe,
+            (EngagementPhase::Threatened, PlayerAction::Negotiate) => NPSAction::Negotiate,
+            (EngagementPhase::Threatened, PlayerAction::OpenFire) => NPSAction::OpenFire,
+            (EngagementPhase::Threatened, PlayerAction::Burn) => NPSAction::OpenFire,
             
             // Under fire responses
-            (EngagementPhase::UnderFire, PlayerAction::ActivateShields) => EnemyAction::OpenFire,
-            (EngagementPhase::UnderFire, PlayerAction::ActivatePDCs) => EnemyAction::LaunchTorpedoes,
-            (EngagementPhase::UnderFire, PlayerAction::LaunchTorpedoes) => EnemyAction::Destroy,
-            (EngagementPhase::UnderFire, PlayerAction::Burn) => EnemyAction::OpenFire,
-            (EngagementPhase::UnderFire, PlayerAction::SurrenderCargo) => EnemyAction::Rob,
-            (EngagementPhase::UnderFire, PlayerAction::SurrenderShip) => EnemyAction::Rob,
+            (EngagementPhase::UnderFire, PlayerAction::ActivateShields) => NPSAction::OpenFire,
+            (EngagementPhase::UnderFire, PlayerAction::ActivatePDCs) => NPSAction::LaunchTorpedoes,
+            (EngagementPhase::UnderFire, PlayerAction::LaunchTorpedoes) => NPSAction::Destroy,
+            (EngagementPhase::UnderFire, PlayerAction::Burn) => NPSAction::OpenFire,
+            (EngagementPhase::UnderFire, PlayerAction::SurrenderCargo) => NPSAction::Rob,
+            (EngagementPhase::UnderFire, PlayerAction::SurrenderShip) => NPSAction::Rob,
             
             // Default aggressive response
-            _ => EnemyAction::OpenFire,
+            _ => NPSAction::OpenFire,
         }
     }
 
     #[inline(always)]
-    fn calculate_outcome(self: Engagement, player_action: PlayerAction, enemy_action: EnemyAction) -> EngagementOutcome {
+    fn calculate_outcome(self: Engagement, player_action: PlayerAction, enemy_action: NPSAction) -> EngagementOutcome {
         match (player_action, enemy_action) {
             // Peaceful resolutions
-            (PlayerAction::PayBribe, EnemyAction::AcceptBribe) => EngagementOutcome::BribePaid,
-            (PlayerAction::Negotiate, EnemyAction::Negotiate) => EngagementOutcome::Negotiated,
-            (PlayerAction::SurrenderCargo, EnemyAction::Rob) => EngagementOutcome::PlayerRobbed,
+            (PlayerAction::PayBribe, NPSAction::AcceptBribe) => EngagementOutcome::BribePaid,
+            (PlayerAction::Negotiate, NPSAction::Negotiate) => EngagementOutcome::Negotiated,
+            (PlayerAction::SurrenderCargo, NPSAction::Rob) => EngagementOutcome::PlayerRobbed,
             
             // Combat outcomes - simplified for now
-            (PlayerAction::OpenFire, EnemyAction::OpenFire) => {
+            (PlayerAction::OpenFire, NPSAction::OpenFire) => {
                 // This would use ship stats to determine winner
                 if self.player_hull > self.enemy_hull {
                     EngagementOutcome::EnemyDestroyed
@@ -222,7 +222,7 @@ pub impl EngagementImpl of EngagementTrait {
             },
             
             // Escape attempts
-            (PlayerAction::Burn, EnemyAction::OpenFire) => {
+            (PlayerAction::Burn, NPSAction::OpenFire) => {
                 // Success depends on ship speed/s_class
                 EngagementOutcome::PlayerEscaped // Simplified
             },
@@ -261,13 +261,13 @@ pub impl EngagementImpl of EngagementTrait {
         
         // Determine new phase based on enemy response
         let new_phase = match self.enemy_action {
-            EnemyAction::Threaten => EngagementPhase::Threatened,
-            EnemyAction::OpenFire => EngagementPhase::UnderFire,
-            EnemyAction::BoardingAction => EngagementPhase::Boarding,
-            EnemyAction::Negotiate => EngagementPhase::Negotiations,
-            EnemyAction::Retreat => EngagementPhase::Resolved,
-            EnemyAction::AcceptBribe => EngagementPhase::Resolved,
-            EnemyAction::Rob => EngagementPhase::Resolved,
+            NPSAction::Threaten => EngagementPhase::Threatened,
+            NPSAction::OpenFire => EngagementPhase::UnderFire,
+            NPSAction::BoardingAction => EngagementPhase::Boarding,
+            NPSAction::Negotiate => EngagementPhase::Negotiations,
+            NPSAction::Retreat => EngagementPhase::Resolved,
+            NPSAction::AcceptBribe => EngagementPhase::Resolved,
+            NPSAction::Rob => EngagementPhase::Resolved,
             _ => self.current_phase,
         };
         
