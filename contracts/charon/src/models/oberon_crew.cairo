@@ -4,10 +4,8 @@ use starknet::ContractAddress;
 #[dojo::model]
 pub struct CrewMember {
     #[key]
-    pub id: u64,
-    #[key]               
+    pub id: u64,           
     pub ship: ContractAddress,  
-    pub owner: ContractAddress, 
     pub role: CrewRole,         
     pub health: u8,             
     pub morale: u8,            
@@ -61,7 +59,6 @@ pub impl CrewMemberImpl of CrewMemberTrait {
     fn new(
         id: u64,
         ship: ContractAddress,
-        owner: ContractAddress,
         role: CrewRole,
         health: u8,
         morale: u8,
@@ -73,7 +70,6 @@ pub impl CrewMemberImpl of CrewMemberTrait {
         CrewMember {
             id,
             ship,
-            owner,
             role,
             health,
             morale,

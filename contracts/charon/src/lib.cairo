@@ -11,6 +11,7 @@ pub mod systems {
 }
 
 pub mod utils;
+pub mod constants;
 
 pub mod models{
     pub mod asteroids;

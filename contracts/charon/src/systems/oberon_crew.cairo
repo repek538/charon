@@ -1,6 +1,6 @@
 use starknet::ContractAddress;
 use charon::models::oberon_crew::{CrewMember, CrewMemberTrait, CrewAbility, CrewAbilityTrait, CrewRole, AbilityType};
-use charon::models::oberon::{ShipOberon};
+use charon::models::oberon::{ShipOberon,Crew,CrewTrait};
 
 #[starknet::interface]
 pub trait IOberonCrew<T> {
@@ -54,7 +54,8 @@ pub trait IOberonCrew<T> {
 
 #[dojo::contract]
 pub mod oberon_crew {
-    use super::{IOberonCrew, CrewMember, CrewMemberTrait, CrewAbility, CrewAbilityTrait, CrewRole, AbilityType, ShipOberon};
+    use core::num::traits::Zero;
+use super::{IOberonCrew, CrewMember, CrewMemberTrait, CrewAbility, CrewAbilityTrait, CrewRole, AbilityType, ShipOberon,Crew};
     use starknet::{ContractAddress, get_caller_address, get_block_timestamp};
     use dojo::model::{ModelStorage, Model};
     use dojo::event::EventStorage;
@@ -121,7 +122,7 @@ pub mod oberon_crew {
             let caller = get_caller_address();
             
             // Verify ship ownership
-            let ship_data: ShipOberon = world.read_model(caller);
+            let mut ship_data: ShipOberon = world.read_model(caller);
             assert(ship_data.owner == caller, 'Not ship owner');
             assert(ship == caller, 'Ship address mismatch');
             
@@ -139,7 +140,6 @@ pub mod oberon_crew {
             let crew_member = CrewMemberTrait::new(
                 crew_id,
                 ship,
-                caller,
                 role,
                 health,
                 morale,
@@ -148,7 +148,8 @@ pub mod oberon_crew {
                 strength,
                 dexterity,
             );
-            
+
+
             world.write_model(@crew_member);
             
             // Emit event
@@ -174,7 +175,7 @@ pub mod oberon_crew {
             
             // Get crew member
             let crew_member: CrewMember = world.read_model((crew_id, caller));
-            assert(crew_member.owner == caller, 'Not crew owner');
+            assert(crew_member.ship == caller, 'Not crew owner');
             assert(crew_member.active, 'Crew member inactive');
             
             // Check if role can use this ability
@@ -205,7 +206,7 @@ pub mod oberon_crew {
             
             // Verify ownership
             let crew_member: CrewMember = world.read_model((crew_id, caller));
-            assert(crew_member.owner == caller, 'Not crew owner');
+            assert(crew_member.ship == caller, 'Not crew owner');
             assert(crew_member.is_effective(), 'Crew not effective');
             
             // Get and activate ability
@@ -234,7 +235,7 @@ pub mod oberon_crew {
             let caller = get_caller_address();
             
             let mut crew_member: CrewMember = world.read_model((crew_id, caller));
-            assert(crew_member.owner == caller, 'Not crew owner');
+            assert(crew_member.ship == caller, 'Not crew owner');
             
             let old_health = crew_member.health;
             crew_member.heal(amount);
@@ -259,7 +260,7 @@ pub mod oberon_crew {
             let caller = get_caller_address();
             
             let mut crew_member: CrewMember = world.read_model((crew_id, caller));
-            assert(crew_member.owner == caller, 'Not crew owner');
+            assert(crew_member.ship == caller, 'Not crew owner');
             assert(crew_member.active, 'Crew member inactive');
             
             let old_level = crew_member.get_level();

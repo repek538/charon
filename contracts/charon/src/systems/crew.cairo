@@ -5,10 +5,7 @@ use charon::models::oberon::{Crew,CrewTrait,ShipOberon};
 pub trait ICrew<T> {
     fn create_crew(
         ref self: T,
-        members: u8,
-        engineers: u8,
-        gunners: u8,
-        medics: u8,
+        crew_id: u64,
     );
 }
 
@@ -16,6 +13,8 @@ pub trait ICrew<T> {
 
 pub mod  crew {
 
+    use crate::models::oberon_crew::CrewRole;
+    use crate::models::oberon_crew::CrewMember;
     use super::{ICrew,Crew,CrewTrait,ShipOberon};
 
     use starknet::{ContractAddress,get_caller_address};
@@ -27,10 +26,7 @@ pub mod  crew {
 
         fn create_crew(
             ref self: ContractState,
-            members: u8,
-            engineers: u8,
-            gunners: u8,
-            medics: u8, 
+            crew_id: u64,
             ){
                 let mut world = self.world_default();
                 let captain = get_caller_address();
@@ -39,16 +35,35 @@ pub mod  crew {
                 let existing_ship: ShipOberon = world.read_model(captain);
                 assert(existing_ship.point_defense > 0, 'Ship Not Created');
 
-                let crew = CrewTrait::new(
-                ship,
-                captain,
-                members,
-                engineers,
-                gunners,
-                medics,
-                );
+                let crew: CrewMember = world.read_model((crew_id,ship));
 
-                world.write_model(@crew);
+                let mut ship_crew: Crew = world.read_model(ship);
+
+                ship_crew.members += 1;
+                
+
+                match crew.role {
+                    CrewRole::Captain => {
+                        ship_crew.captain = captain;
+                    },
+                    CrewRole::Pilot => {
+                        ship_crew.pilots += 1;
+                    },
+                    CrewRole::Engineer => {
+                        ship_crew.engineers += 1;
+                    },
+                    CrewRole::Gunner => {
+                        ship_crew.gunners += 1;
+                    },
+                    CrewRole::Medic => {
+                        ship_crew.medics += 1;
+                    },
+                    CrewRole::Scientist => {
+                        ship_crew.scientists += 1;
+                    },
+                }
+
+                world.write_model(@ship_crew);
 
             }
 

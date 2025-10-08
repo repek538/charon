@@ -20,8 +20,8 @@ pub struct Ship {
     pub railguns: u8,                // Kinetic energy weapons
     pub torpedoes: u8,               // Nuclear/antimatter warheads
     pub pdcs: u8,                    // Point Defense Cannons
-    pub torpedo_ammo: u32,           // Current torpedo count
-    pub railgun_ammo: u32,           // Railgun slugs/projectiles
+    pub torpedo_ammo: u8,           // Current torpedo count
+    pub railgun_ammo: u8,           // Railgun slugs/projectiles
     
     // Fuel and power systems
     pub fuel_capacity: u32,          // Maximum fuel (for thrusters)
@@ -223,8 +223,8 @@ pub impl ShipImpl of ShipTrait {
         railguns: u8,
         torpedoes: u8,
         pdcs: u8,
-        torpedo_ammo: u32,
-        railgun_ammo: u32,
+        torpedo_ammo: u8,
+        railgun_ammo: u8,
         fuel_capacity: u32,
         current_fuel: u32,
         reactor_fuel: u32,
@@ -443,7 +443,7 @@ pub impl ShipImpl of ShipTrait {
     }
 
     #[inline(always)]
-    fn update_ammo(ref self: Ship, railgun_used: u32, torpedo_used: u32) {
+    fn update_ammo(ref self: Ship, railgun_used: u8, torpedo_used: u8) {
         if railgun_used <= self.railgun_ammo {
             self.railgun_ammo -= railgun_used;
         } else {

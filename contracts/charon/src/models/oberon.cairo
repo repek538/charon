@@ -1,5 +1,5 @@
 use starknet::ContractAddress;
-use charon::models::ships::{ShipClass,Faction};
+use charon::models::ships::{ShipClass,Faction,Vec2};
 use charon::models::stations::{StationType};
 
 #[derive(Copy, Drop, Serde, Debug)]
@@ -11,7 +11,9 @@ pub struct Crew {
     pub members: u8,             
     pub engineers: u8,            
     pub gunners: u8,              
-    pub medics: u8,               
+    pub medics: u8, 
+    pub pilots: u8,
+    pub scientists: u8,            
 }
 
 
@@ -145,11 +147,6 @@ pub struct OberonRailgun {
     pub ship_class: ShipClass,
 }
 
-#[derive(Copy, Drop, Serde, IntrospectPacked, Debug, DojoStore)]
-pub struct Vec2 {
-    pub x: u32,
-    pub y: u32,
-}
 
 
 #[derive(Copy, Drop, Serde, Debug)]
@@ -216,6 +213,8 @@ pub impl CrewImpl of CrewTrait {
         engineers: u8,
         gunners: u8,
         medics: u8,
+        pilots: u8,
+        scientists: u8,
     ) -> Crew {
         Crew {
             ship,
@@ -224,6 +223,8 @@ pub impl CrewImpl of CrewTrait {
             engineers,
             gunners,
             medics,
+            pilots,
+            scientists
         }
     }
 
@@ -436,13 +437,13 @@ pub impl ShipOberonImpl of ShipOberonTrait {
     }
 
     #[inline(always)]
-    fn calculate_fuel_consumption(self: ShipOberon, distance: u32) -> u32 {
-        // Oberon-s_class is a light freighter, relatively efficient
-        let base_consumption = distance / 15; // Better fuel efficiency than warships
+    fn calculate_fuel_consumption(self: ShipOberon, distance_squared: u32) -> u32 {
+        // Adjust formula for squared distance
+        // Since distance² grows faster, reduce the divisor accordingly
+        let base_consumption = distance_squared / 225; // 15² = 225
         
-        // Cargo affects fuel consumption
         let cargo_modifier = if self.cargo > 500 {
-            base_consumption / 4 // Heavy cargo penalty
+            base_consumption / 4
         } else {
             0
         };

@@ -1,30 +1,21 @@
 use starknet::ContractAddress;
 use charon::models::oberon::{
-    ShipOberon, ShipOberonTrait, Vec2,
+    ShipOberon, ShipOberonTrait,
     OberonScanner, OberonScannerTrait,
     OberonRailgun, OberonRailgunTrait,
     OberonTorpedo, OberonTorpedoTrait,
     OberonPDC, OberonPDCTrait,
-    OberonShield, OberonShieldTrait,
+    OberonShield, OberonShieldTrait, Crew,CrewTrait
 };
-use charon::models::ships::ShipClass;
+use charon::models::ships::{ShipClass,Vec2};
+
+
 
 #[starknet::interface]
 pub trait IShipOberon<T> {
     fn create_ship(
         ref self: T,
         name: felt252,
-        hull: u32,
-        shield: u32,
-        point_defense: u8,
-        torpedoes: u8,
-        railgun: bool,
-        crew_capacity: u16,
-        fuel: u32,
-        cargo: u32,
-        location_x: u32,
-        location_y: u32,
-        power_output: u16
     );
 }
 
@@ -39,30 +30,37 @@ pub mod  shipoberon {
     OberonTorpedo, OberonTorpedoTrait,
     OberonPDC, OberonPDCTrait,
     OberonShield, OberonShieldTrait,
-    ShipClass
+    ShipClass,Crew,CrewTrait
     };
 
     use starknet::{ContractAddress,get_caller_address};
     use dojo::model::{ModelStorage};
     use dojo::event::EventStorage;
 
+    use charon::constants::{
+        DEFAULT_POINT_DEFENSE,
+        DEFAULT_TORPEDOES,
+        DEFAULT_RAILGUN,
+
+        DEFAULT_CREW_CAPACITY,
+        DEFAULT_FUEL,
+        DEFAULT_CARGO,
+        DEFAULT_POWER_OUTPUT,
+        DEFAULT_POWER_AVAILABLE,
+
+        DEFAULT_LOCATION_X,
+        DEFAULT_LOCATION_Y,
+        DEFAULT_MORALE,
+        DEFAULT_HULL,
+        DEFAULT_SHIELD
+        };
+
     #[abi(embed_v0)]
     impl ShipOberonImpl of IShipOberon<ContractState> { 
 
         fn create_ship(
             ref self: ContractState,
-            name: felt252,
-            hull: u32,
-            shield: u32,
-            point_defense: u8,
-            torpedoes: u8,
-            railgun: bool,
-            crew_capacity: u16,
-            fuel: u32,
-            cargo: u32,
-            location_x: u32,
-            location_y: u32 ,
-            power_output: u16
+            name: felt252
         ){
             let mut world = self.world_default();
             let owner = get_caller_address();
@@ -72,24 +70,24 @@ pub mod  shipoberon {
             assert(existing_ship.point_defense == 0, 'Ship already exists');
 
             let location = Vec2 {
-                x: location_x,
-                y: location_y,
+                x: DEFAULT_LOCATION_X,
+                y: DEFAULT_LOCATION_Y,
             };
 
             let ship_oberon = ShipOberonTrait::new(
                 ship,
                 owner,
                 name,
-                hull,
-                shield,
-                point_defense,
-                torpedoes,
-                railgun,
-                crew_capacity,
-                fuel,
-                cargo,
+                DEFAULT_HULL,
+                DEFAULT_SHIELD,
+                DEFAULT_POINT_DEFENSE,
+                DEFAULT_TORPEDOES,
+                DEFAULT_RAILGUN,
+                DEFAULT_CREW_CAPACITY,
+                DEFAULT_FUEL,
+                DEFAULT_CARGO,
                 location,
-                power_output
+                DEFAULT_POWER_OUTPUT
             );
 
             // Create scanner system
@@ -187,11 +185,25 @@ pub mod  shipoberon {
                 ShipClass::Corvette,
             );
 
+            let ship_crew = CrewTrait::new(
+                ship,
+                captain: owner,
+                members: 0,
+                engineers: 0,
+                gunners: 0,
+                medics: 0,
+                pilots: 0,
+                scientists: 0           
+            );
+
+
+
             // Write all models to world storage
             world.write_model(@ship_oberon);
             world.write_model(@scanner);
             world.write_model(@railgun);
             world.write_model(@shield);
+            world.write_model(@ship_crew);
 
         }
 
