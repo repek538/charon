@@ -12,7 +12,8 @@ import {
   Clock,
   Zap
 } from 'lucide-react';
-import { drawShip } from './GameImageManager';
+import { drawCelestialBody, drawLunar, drawShip, initializeImages } from './GameImageManager';
+import type { CelestialBody } from '../types';
 
 interface Position {
   x: number;
@@ -39,6 +40,11 @@ interface PlayerShip {
   supplies: number;
   hull: number;
   credits: number;
+}
+
+interface LunarCoor {
+  x: number;
+  y: number;
 }
 
 interface GameEvent {
@@ -76,6 +82,20 @@ const CharonUnifiedGame: React.FC = () => {
     hull: 100,
     credits: 150
   });
+
+    const [lunar, setLunarCoord] = useState<LunarCoor>({
+    x: 15,
+    y: 15,
+    });
+
+   const [celestialBodies] = useState<CelestialBody[]>([
+    { id: 'lunar', x: 15, y: 15, imageName: 'lunar', baseSize: 240, color: '#888888' },
+    { id: 'mars', x: 800, y: 800, imageName: 'mars', baseSize: 400, color: '#ff4400' },
+    { id: 'earth', x: 100, y: 100, imageName: 'earth', baseSize: 480, color: '#0088ff' },
+    { id: 'charon', x: 7000, y: 7000, imageName: 'charon', baseSize: 180, color: '#666666' },
+    { id: 'ceres', x: 5000, y: 5000, imageName: 'ceres', baseSize: 100, color: '#999999' },
+  ]);
+
   const [currentEvent, setCurrentEvent] = useState<GameEvent | null>(null);
   const [selectedCell, setSelectedCell] = useState<{x: number, y: number} | null>(null);
   const [scanRange] = useState(2);
@@ -112,6 +132,10 @@ const CharonUnifiedGame: React.FC = () => {
       setScanLines(prev => (prev + 1) % 100);
     }, 50);
     return () => clearInterval(scanInterval);
+  }, []);
+
+  useEffect(() => {
+    initializeImages();
   }, []);
 
   // Draw grid with game objects
@@ -216,10 +240,35 @@ const CharonUnifiedGame: React.FC = () => {
     const shipX = originX + playerShip.x * cellSize / gridScale;
     const shipY = originY - playerShip.y * cellSize / gridScale;
 
+    const lunarX = originX + lunar.x * cellSize / gridScale;
+    const lunarY = originY - lunar.y * cellSize / gridScale;
+
     if (shipX >= -15 && shipY >= -15 && shipX <= canvas.width + 15 && shipY <= canvas.height + 15) {
     drawShip(ctx, shipX, shipY);
     }
-    
+
+      // Calculate scaled lunar size
+    const scaledLunarSize = 240 / gridScale; // This makes it zoom with the grid
+    const lunarHalfSize = scaledLunarSize / 2;
+
+    // if (lunarX >= -lunarHalfSize && lunarY >= -lunarHalfSize && 
+    //     lunarX <= canvas.width + lunarHalfSize && lunarY <= canvas.height + lunarHalfSize) {
+    //   drawLunar(ctx, lunarX, lunarY, scaledLunarSize); // Pass the scaled size
+    // }
+
+        celestialBodies.forEach(body => {
+          const bodyX = originX + body.x * cellSize / gridScale;
+          const bodyY = originY - body.y * cellSize / gridScale;
+          const scaledSize = body.baseSize / gridScale;
+          const halfSize = scaledSize / 2;
+          
+          // Visibility check with buffer
+          if (bodyX >= -halfSize && bodyY >= -halfSize && 
+              bodyX <= canvas.width + halfSize && bodyY <= canvas.height + halfSize) {
+            drawCelestialBody(ctx, bodyX, bodyY, body.imageName, scaledSize, body.color);
+          }
+        });
+        
     // Draw target
     if (targetPosition) {
       const targetX = originX + targetPosition.x * cellSize / gridScale;
@@ -243,7 +292,7 @@ const CharonUnifiedGame: React.FC = () => {
       }
     }
     
-  }, [playerShip, viewOffset, gridScale, targetPosition, gridCells]);
+  }, [playerShip, viewOffset, gridScale, targetPosition, gridCells,celestialBodies]);
 
   // Game helper functions
   const getCell = (x: number, y: number): GridCell | undefined => {

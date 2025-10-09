@@ -1,75 +1,159 @@
 use starknet::ContractAddress;
+use core::num::traits::Zero;
 
+// Core game state
 #[derive(Copy, Drop, Serde, Debug)]
 #[dojo::model]
 pub struct Game {
     #[key]
     pub game_id: u32,
+    pub creator: ContractAddress,   
     pub over: bool,
     pub player_count: u8,
     pub unit_count: u32,
     pub engagements_count: u64,
     pub clock: u64,
     pub penalty: u64,
-    
-    // Rescue Gauntlet Fields
-    pub rescue_id: u32,              // Unique ID for this rescue mission
-    pub creator_address: ContractAddress,     // Address of gauntlet creator
-    pub creator_stake: u256,           // Amount staked by creator
-    pub rescue_reward: u256,           // Reward for successful rescue
-    pub attempt_fee: u256,             // Fee to attempt the rescue
-    pub credits_required: u256,        // Credits needed to complete rescue
-    pub ship_count: u8,               // Number of enemy ships placed
-    pub station_count: u8,            // Number of stations placed
-    pub mortality_level: u8,          // Required mortality/difficulty level to win (0-100)
-    pub threat_budget_total: u32,     // Total threat points available
-    pub threat_budget_used: u32,      // Threat points currently used
-    pub attempt_count: u32,           // Total number of attempts
-    pub success_count: u32,           // Number of successful rescues
 }
 
-// Generate trait for creating new games
+// Rescue gauntlet configuration
+#[derive(Copy, Drop, Serde, Debug)]
+#[dojo::model]
+pub struct RescueGauntlet {
+    #[key]
+    pub game_id: u32,
+    #[key]
+    pub rescue_id: u32,
+    pub creator_address: ContractAddress,
+    pub creator_stake: u256,
+    pub rescue_reward: u256,
+    pub attempt_fee: u256,
+    pub credits_required: u256,
+    pub mortality_level: u8,
+    pub threat_budget_total: u32,
+    pub threat_budget_used: u32,
+    pub attempt_count: u32,
+    pub rescuer_count: u8,                 // 0, 1, or 2 (current active attempts)
+    pub rescue_deadline: u64,              // Overall gauntlet expires
+    pub attempt_duration: u64,             // Time limit per attempt (e.g., 3600 seconds)
+    pub is_rescued: bool,                  // True when someone completes
+    pub rescurer_completed: ContractAddress, // WINNER - first to complete
+    pub is_expired: bool,
+}
+
+// Track the two rescuers and their attempt windows
+#[derive(Copy, Drop, Serde, Debug)]
+#[dojo::model]
+pub struct Rescuers {
+    #[key]
+    pub game_id: u32,
+    #[key]
+    pub rescue_id: u32,
+    pub first_rescuer: ContractAddress,
+    pub second_rescuer: ContractAddress,
+    pub first_attempt_start: u64,          // When first rescuer started
+    pub second_attempt_start: u64,         // When second rescuer started
+    pub first_rescue_time: u64,            // When completed (0 if not completed)
+    pub second_rescue_time: u64,           // When completed (0 if not completed)
+}
+
+// Ship composition for a gauntlet
+#[derive(Copy, Drop, Serde, Debug)]
+#[dojo::model]
+pub struct ShipComposition {
+    #[key]
+    pub game_id: u32,
+    #[key]
+    pub rescue_id: u32,
+    pub corvette_count: u8,
+    pub frigate_count: u8,
+    pub destroyer_count: u8,
+    pub cruiser_count: u8,
+    pub battleship_count: u8,
+    pub carrier_count: u8,
+    pub freighter_count: u8,
+    pub pirate_skiff_count: u8,
+}
+
+// Station composition for a gauntlet
+#[derive(Copy, Drop, Serde, Debug)]
+#[dojo::model]
+pub struct StationComposition {
+    #[key]
+    pub game_id: u32,
+    #[key]
+    pub rescue_id: u32,
+    pub shipyard_count: u8,
+    pub tradehub_count: u8,
+    pub mining_outpost_count: u8,
+    pub research_lab_count: u8,
+    pub military_base_count: u8,
+    pub smuggler_den_count: u8,
+    pub relay_station_count: u8,
+    pub habitat_count: u8,
+}
+
+
+
 #[generate_trait]
 pub impl GameImpl of GameTrait {
-    // Create a new game with default values
-    fn new(game_id: u32) -> Game {
+    fn new(game_id: u32,creator: ContractAddress) -> Game {
         Game {
             game_id,
+            creator,
             over: false,
             player_count: 0,
             unit_count: 0,
             engagements_count: 0,
             clock: 0,
             penalty: 0,
-            rescue_id: 0,
-            creator_address: 0,
-            creator_stake: 0,
-            rescue_reward: 0,
-            attempt_fee: 0,
-            credits_required: 0,
-            ship_count: 0,
-            station_count: 0,
-            mortality_level: 0,
-            threat_budget_total: 0,
-            threat_budget_used: 0,
-            attempt_count: 0,
-            success_count: 0,
         }
     }
-    
-    // Create a new rescue gauntlet
-    fn new_rescue_gauntlet(
+
+    fn increment_player_count(ref self: Game) {
+        self.player_count += 1;
+    }
+
+    fn increment_unit_count(ref self: Game) {
+        self.unit_count += 1;
+    }
+
+    fn increment_engagements(ref self: Game) {
+        self.engagements_count += 1;
+    }
+
+    fn update_clock(ref self: Game, new_clock: u64) {
+        self.clock = new_clock;
+    }
+
+    fn end_game(ref self: Game) {
+        self.over = true;
+    }
+
+    fn is_active(self: @Game) -> bool {
+        !*self.over
+    }
+    fn is_creator(self: @Game, address: ContractAddress) -> bool {
+        *self.creator == address
+    }
+}
+
+#[generate_trait]
+pub impl RescueGauntletImpl of RescueGauntletTrait {
+    fn new(
         game_id: u32,
         rescue_id: u32,
-        creator_address: felt252,
-        creator_stake: u64,
-        rescue_reward: u64,
-        attempt_fee: u64,
-        credits_required: u32,
+        creator_address: ContractAddress,
+        creator_stake: u256,
+        rescue_reward: u256,
+        attempt_fee: u256,
+        credits_required: u256,
         mortality_level: u8,
-        threat_budget: u32
-    ) -> Game {
-        Game {
+        threat_budget_total: u32,
+        rescue_deadline: u64,
+        attempt_duration: u64,
+    ) -> RescueGauntlet {
+        RescueGauntlet {
             game_id,
             rescue_id,
             creator_address,
@@ -78,261 +162,294 @@ pub impl GameImpl of GameTrait {
             attempt_fee,
             credits_required,
             mortality_level,
-            threat_budget_total: threat_budget,
-            threat_budget_used: 0,
-            ship_count: 0,
-            station_count: 0,
-            over: false,
-            player_count: 0,
-            unit_count: 0,
-            engagements_count: 0,
-            clock: 0,
-            penalty: 0,
-            attempt_count: 0,
-            success_count: 0,
-        }
-    }
-    
-    // Create a new game with custom parameters (existing function)
-    fn new_with_params(
-        game_id: u32,
-        minimum_moves: u8,
-        player_count: u8,
-        unit_count: u32,
-        clock: u64
-    ) -> Game {
-        Game {
-            game_id,
-            over: false,
-            player_count,
-            unit_count,
-            engagements_count: 0,
-            clock,
-            penalty: 0,
-            rescue_id: 0,
-            creator_address: 0,
-            creator_stake: 0,
-            rescue_reward: 0,
-            attempt_fee: 0,
-            credits_required: 0,
-            ship_count: 0,
-            station_count: 0,
-            mortality_level: 0,
-            threat_budget_total: 0,
+            threat_budget_total,
             threat_budget_used: 0,
             attempt_count: 0,
-            success_count: 0,
+            rescuer_count: 0,
+            rescue_deadline,
+            attempt_duration,
+            is_rescued: false,
+            rescurer_completed: Zero::zero(),
+            is_expired: false,
         }
     }
-    
-    // Add a ship to the gauntlet
-    fn add_ship(ref self: Game, threat_cost: u32) -> bool {
-        if self.threat_budget_used + threat_cost > self.threat_budget_total {
-            return false; // Not enough budget
-        }
-        self.ship_count += 1;
-        self.threat_budget_used += threat_cost;
-        true
-    }
-    
-    // Add a station to the gauntlet
-    fn add_station(ref self: Game, threat_cost: u32) -> bool {
-        if self.threat_budget_used + threat_cost > self.threat_budget_total {
-            return false; // Not enough budget
-        }
-        self.station_count += 1;
-        self.threat_budget_used += threat_cost;
-        true
-    }
-    
-    // Remove a ship from the gauntlet
-    fn remove_ship(ref self: Game, threat_cost: u32) -> bool {
-        if self.ship_count == 0 {
-            return false;
-        }
-        self.ship_count -= 1;
-        if self.threat_budget_used >= threat_cost {
-            self.threat_budget_used -= threat_cost;
+
+    fn use_threat_budget(ref self: RescueGauntlet, amount: u32) -> bool {
+        if self.threat_budget_used + amount <= self.threat_budget_total {
+            self.threat_budget_used += amount;
+            true
         } else {
-            self.threat_budget_used = 0;
-        }
-        true
-    }
-    
-    // Remove a station from the gauntlet
-    fn remove_station(ref self: Game, threat_cost: u32) -> bool {
-        if self.station_count == 0 {
-            return false;
-        }
-        self.station_count -= 1;
-        if self.threat_budget_used >= threat_cost {
-            self.threat_budget_used -= threat_cost;
-        } else {
-            self.threat_budget_used = 0;
-        }
-        true
-    }
-    
-    // Get remaining threat budget
-    fn remaining_budget(self: @Game) -> u32 {
-        if *self.threat_budget_total > *self.threat_budget_used {
-            *self.threat_budget_total - *self.threat_budget_used
-        } else {
-            0
+            false
         }
     }
-    
-    // Record a rescue attempt
-    fn record_attempt(ref self: Game) {
+
+    fn increment_attempt(ref self: RescueGauntlet) {
         self.attempt_count += 1;
     }
-    
-    // Record a successful rescue
-    fn record_success(ref self: Game) {
-        self.success_count += 1;
-    }
-    
-    // Calculate success rate (returns percentage 0-100)
-    fn success_rate(self: @Game) -> u8 {
-        if *self.attempt_count == 0 {
-            return 0;
-        }
-        let rate = (*self.success_count * 100) / *self.attempt_count;
-        if rate > 100 {
-            100
+
+    fn add_rescuer(ref self: RescueGauntlet) -> bool {
+        if self.rescuer_count < 2 && !self.is_expired && !self.is_rescued {
+            self.rescuer_count += 1;
+            true
         } else {
-            rate.try_into().unwrap()
+            false
         }
     }
-    
-    // Check if gauntlet meets mortality level requirement
-    fn check_mortality_requirement(self: @Game, achieved_mortality: u8) -> bool {
-        achieved_mortality >= *self.mortality_level
-    }
-    
-    // Calculate creator earnings from failed attempts
-    fn creator_earnings(self: @Game) -> u64 {
-        let failed_attempts = *self.attempt_count - *self.success_count;
-        failed_attempts.into() * *self.attempt_fee
-    }
-    
-    // Calculate net profit/loss for creator
-    fn creator_net_result(self: @Game) -> i64 {
-        let earnings: i64 = self.creator_earnings().try_into().unwrap();
-        let stake: i64 = (*self.creator_stake).try_into().unwrap();
-        let losses: i64 = ((*self.success_count).into() * *self.rescue_reward).try_into().unwrap();
-        
-        earnings - losses
-    }
-    
-    // Check if gauntlet is still active (creator hasn't lost all stake)
-    fn is_gauntlet_active(self: @Game) -> bool {
-        !*self.over && self.creator_net_result() > -(*self.creator_stake).try_into().unwrap()
-    }
-    
-    // Validate gauntlet is ready to publish
-    fn validate_gauntlet(self: @Game) -> bool {
-        // Must have placed at least some obstacles
-        let has_obstacles = *self.ship_count > 0 || *self.station_count > 0;
-        
-        // Must have used threat budget
-        let budget_used = *self.threat_budget_used > 0;
-        
-        // Must have set required fields
-        let has_stake = *self.creator_stake > 0;
-        let has_reward = *self.rescue_reward > 0;
-        let has_fee = *self.attempt_fee > 0;
-        
-        has_obstacles && budget_used && has_stake && has_reward && has_fee
-    }
 
-    // Check if game is active
-    fn is_active(self: @Game) -> bool {
-        !*self.over && *self.player_count > 0
-    }
-
-    // Check if game is full (assuming max players)
-    fn is_full(self: @Game, max_players: u8) -> bool {
-        *self.player_count >= max_players
-    }
-
-    // Add a player to the game
-    fn add_player(ref self: Game) -> bool {
-        if self.over {
-            return false;
+    fn remove_rescuer(ref self: RescueGauntlet) {
+        if self.rescuer_count > 0 {
+            self.rescuer_count -= 1;
         }
-        self.player_count += 1;
-        true
     }
 
-    // Remove a player from the game
-    fn remove_player(ref self: Game) -> bool {
-        if self.player_count == 0 {
-            return false;
+    fn complete_rescue(ref self: RescueGauntlet, rescuer: ContractAddress) {
+        self.is_rescued = true;
+        self.rescurer_completed = rescuer;
+    }
+
+    fn is_full(self: @RescueGauntlet) -> bool {
+        *self.rescuer_count >= 2
+    }
+
+    fn is_active(self: @RescueGauntlet) -> bool {
+        !*self.is_rescued && !*self.is_expired
+    }
+
+    fn check_expired(ref self: RescueGauntlet, current_time: u64) {
+        if current_time >= self.rescue_deadline {
+            self.is_expired = true;
         }
-        self.player_count -= 1;
-        
-        // End game if no players left
-        if self.player_count == 0 {
-            self.over = true;
-        }
-        true
     }
 
-    // Increment engagement count
-    fn new_engagement(ref self: Game) {
-        self.engagements_count += 1;
-    }
-
-    // Update game clock
-    fn update_clock(ref self: Game, new_time: u64) {
-        self.clock = new_time;
-    }
-
-    // Add penalty time
-    fn add_penalty(ref self: Game, penalty_time: u64) {
-        self.penalty += penalty_time;
-    }
-
-    // End the game
-    fn end_game(ref self: Game) {
-        self.over = true;
-    }
-
-    // Get total game time including penalties
-    fn total_time(self: @Game) -> u64 {
-        *self.clock + *self.penalty
-    }
-
-    // Reset game state (for restarting)
-    fn reset(ref self: Game) {
-        self.over = false;
-        self.player_count = 0;
-        self.unit_count = 0;
-        self.engagements_count = 0;
-        self.clock = 0;
-        self.penalty = 0;
-        self.attempt_count = 0;
-        self.success_count = 0;
-        self.threat_budget_used = 0;
-    }
-
-    // Update unit count
-    fn set_unit_count(ref self: Game, count: u32) {
-        self.unit_count = count;
-    }
-
-    // Add units to the game
-    fn add_units(ref self: Game, count: u32) {
-        self.unit_count += count;
-    }
-
-    // Remove units from the game
-    fn remove_units(ref self: Game, count: u32) {
-        if self.unit_count >= count {
-            self.unit_count -= count;
-        } else {
-            self.unit_count = 0;
-        }
+    fn remaining_threat_budget(self: @RescueGauntlet) -> u32 {
+        *self.threat_budget_total - *self.threat_budget_used
     }
 }
+
+#[generate_trait]
+pub impl RescuersImpl of RescuersTrait {
+    fn new(game_id: u32, rescue_id: u32) -> Rescuers {
+        Rescuers {
+            game_id,
+            rescue_id,
+            first_rescuer: Zero::zero(),
+            second_rescuer: Zero::zero(),
+            first_attempt_start: 0,
+            second_attempt_start: 0,
+            first_rescue_time: 0,
+            second_rescue_time: 0,
+        }
+    }
+
+    fn start_first_attempt(ref self: Rescuers, rescuer: ContractAddress, start_time: u64) {
+        self.first_rescuer = rescuer;
+        self.first_attempt_start = start_time;
+        self.first_rescue_time = 0;
+    }
+
+    fn start_second_attempt(ref self: Rescuers, rescuer: ContractAddress, start_time: u64) {
+        self.second_rescuer = rescuer;
+        self.second_attempt_start = start_time;
+        self.second_rescue_time = 0;
+    }
+
+    fn complete_first_rescue(ref self: Rescuers, completion_time: u64) {
+        self.first_rescue_time = completion_time;
+    }
+
+    fn complete_second_rescue(ref self: Rescuers, completion_time: u64) {
+        self.second_rescue_time = completion_time;
+    }
+
+    fn fail_first_attempt(ref self: Rescuers) {
+        self.first_rescuer =Zero::zero();
+        self.first_attempt_start = 0;
+        self.first_rescue_time = 0;
+    }
+
+    fn fail_second_attempt(ref self: Rescuers) {
+        self.second_rescuer = Zero::zero();
+        self.second_attempt_start = 0;
+        self.second_rescue_time = 0;
+    }
+
+    fn is_first_attempt_expired(self: @Rescuers, current_time: u64, attempt_duration: u64) -> bool {
+        if *self.first_attempt_start == 0 || *self.first_rescue_time > 0 {
+            return false;
+        }
+        current_time >= *self.first_attempt_start + attempt_duration
+    }
+
+    fn is_second_attempt_expired(self: @Rescuers, current_time: u64, attempt_duration: u64) -> bool {
+        if *self.second_attempt_start == 0 || *self.second_rescue_time > 0 {
+            return false;
+        }
+        current_time >= *self.second_attempt_start + attempt_duration
+    }
+
+    fn has_first_rescuer(self: @Rescuers) -> bool {
+        *self.first_rescuer != Zero::zero()
+    }
+
+    fn has_second_rescuer(self: @Rescuers) -> bool {
+        *self.second_rescuer != Zero::zero()
+    }
+
+    fn is_first_completed(self: @Rescuers) -> bool {
+        *self.first_rescue_time > 0
+    }
+
+    fn is_second_completed(self: @Rescuers) -> bool {
+        *self.second_rescue_time > 0
+    }
+
+    fn has_available_slot(self: @Rescuers, current_time: u64, attempt_duration: u64) -> bool {
+        // Slot 1 available if: empty OR expired
+        let slot1_available = !self.has_first_rescuer() 
+            || self.is_first_attempt_expired(current_time, attempt_duration);
+        
+        // Slot 2 available if: empty OR expired
+        let slot2_available = !self.has_second_rescuer() 
+            || self.is_second_attempt_expired(current_time, attempt_duration);
+        
+        slot1_available || slot2_available
+    }
+}
+
+#[generate_trait]
+pub impl ShipCompositionImpl of ShipCompositionTrait {
+    fn new(game_id: u32,rescue_id: u32,) -> ShipComposition {
+        ShipComposition {
+            game_id,
+            rescue_id,
+            corvette_count: 0,
+            frigate_count: 0,
+            destroyer_count: 0,
+            cruiser_count: 0,
+            battleship_count: 0,
+            carrier_count: 0,
+            freighter_count: 0,
+            pirate_skiff_count: 0,
+        }
+    }
+
+    fn add_corvettes(ref self: ShipComposition, count: u8) {
+        self.corvette_count += count;
+    }
+
+    fn add_frigates(ref self: ShipComposition, count: u8) {
+        self.frigate_count += count;
+    }
+
+    fn add_destroyers(ref self: ShipComposition, count: u8) {
+        self.destroyer_count += count;
+    }
+
+    fn add_cruisers(ref self: ShipComposition, count: u8) {
+        self.cruiser_count += count;
+    }
+
+    fn add_battleships(ref self: ShipComposition, count: u8) {
+        self.battleship_count += count;
+    }
+
+    fn add_carriers(ref self: ShipComposition, count: u8) {
+        self.carrier_count += count;
+    }
+
+    fn add_freighters(ref self: ShipComposition, count: u8) {
+        self.freighter_count += count;
+    }
+
+    fn add_pirate_skiffs(ref self: ShipComposition, count: u8) {
+        self.pirate_skiff_count += count;
+    }
+
+    fn total_ships(self: @ShipComposition) -> u32 {
+        (*self.corvette_count).into()
+            + (*self.frigate_count).into()
+            + (*self.destroyer_count).into()
+            + (*self.cruiser_count).into()
+            + (*self.battleship_count).into()
+            + (*self.carrier_count).into()
+            + (*self.freighter_count).into()
+            + (*self.pirate_skiff_count).into()
+    }
+
+    fn military_ships(self: @ShipComposition) -> u32 {
+        (*self.corvette_count).into()
+            + (*self.frigate_count).into()
+            + (*self.destroyer_count).into()
+            + (*self.cruiser_count).into()
+            + (*self.battleship_count).into()
+            + (*self.carrier_count).into()
+            + (*self.pirate_skiff_count).into()
+    }
+}
+
+#[generate_trait]
+pub impl StationCompositionImpl of StationCompositionTrait {
+    fn new(game_id: u32,rescue_id: u32,) -> StationComposition {
+        StationComposition {
+            game_id,
+            rescue_id,
+            shipyard_count: 0,
+            tradehub_count: 0,
+            mining_outpost_count: 0,
+            research_lab_count: 0,
+            military_base_count: 0,
+            smuggler_den_count: 0,
+            relay_station_count: 0,
+            habitat_count: 0,
+        }
+    }
+
+    fn add_shipyards(ref self: StationComposition, count: u8) {
+        self.shipyard_count += count;
+    }
+
+    fn add_tradehubs(ref self: StationComposition, count: u8) {
+        self.tradehub_count += count;
+    }
+
+    fn add_mining_outposts(ref self: StationComposition, count: u8) {
+        self.mining_outpost_count += count;
+    }
+
+    fn add_research_labs(ref self: StationComposition, count: u8) {
+        self.research_lab_count += count;
+    }
+
+    fn add_military_bases(ref self: StationComposition, count: u8) {
+        self.military_base_count += count;
+    }
+
+    fn add_smuggler_dens(ref self: StationComposition, count: u8) {
+        self.smuggler_den_count += count;
+    }
+
+    fn add_relay_stations(ref self: StationComposition, count: u8) {
+        self.relay_station_count += count;
+    }
+
+    fn add_habitats(ref self: StationComposition, count: u8) {
+        self.habitat_count += count;
+    }
+
+    fn total_stations(self: @StationComposition) -> u32 {
+        (*self.shipyard_count).into()
+            + (*self.tradehub_count).into()
+            + (*self.mining_outpost_count).into()
+            + (*self.research_lab_count).into()
+            + (*self.military_base_count).into()
+            + (*self.smuggler_den_count).into()
+            + (*self.relay_station_count).into()
+            + (*self.habitat_count).into()
+    }
+
+    fn military_stations(self: @StationComposition) -> u32 {
+        (*self.military_base_count).into()
+    }
+}
+
+

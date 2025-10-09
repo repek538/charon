@@ -7,6 +7,7 @@ import AppRoot from "./AppRoot.tsx";
 import { ToastContainer } from 'react-toastify';
 import { ApollClient } from './providers/client.ts';
 import { ApolloProvider } from "@apollo/client/react";
+import CharonUnifiedGame from './Game/CharonV2.tsx';
 /**
  * Initializes and bootstraps the Dojo application.
  * Sets up the SDK, burner manager, and renders the root component.
@@ -19,7 +20,8 @@ async function main() {
   createRoot(document.getElementById("root")!).render(
       <StrictMode>
           <ApolloProvider client={ApollClient}>
-             <AppRoot />
+             {/* <AppRoot /> */}
+              <CharonUnifiedGame />
              <ToastContainer />
           </ApolloProvider>
       </StrictMode>

@@ -1,12 +1,16 @@
 use starknet::ContractAddress;
 use charon::models::zones::{ZoneType};
 
+
+
 #[derive(Copy, Drop, Serde, Debug)]
 #[dojo::model]
 pub struct Ship {
     #[key]
     pub id: ContractAddress,                     // Unique ship ID
     pub owner: ContractAddress,      // Player or faction holding it
+    pub name: felt252,
+    pub rescue_gauntlet_id: u32,
     pub faction: Faction,            // Political allegiance
     pub s_class: ShipClass,            // Realistic naval s_class
     pub hull_points: u32,            // Structural integrity
@@ -22,6 +26,7 @@ pub struct Ship {
     pub pdcs: u8,                    // Point Defense Cannons
     pub torpedo_ammo: u8,           // Current torpedo count
     pub railgun_ammo: u8,           // Railgun slugs/projectiles
+    pub pdc_ammo: u32,
     
     // Fuel and power systems
     pub fuel_capacity: u32,          // Maximum fuel (for thrusters)
@@ -208,50 +213,7 @@ pub struct ScanResult {
 
 #[generate_trait]
 pub impl ShipImpl of ShipTrait {
-    #[inline(always)]
-    fn new(
-        id: ContractAddress,
-        owner: ContractAddress,
-        faction: Faction,
-        s_class: ShipClass,
-        hull_points: u32,
-        shield_points: u32,
-        speed: u32,
-        crew_size: u32,
-        cargo_capacity: u32,
-        location: Vec2,
-        railguns: u8,
-        torpedoes: u8,
-        pdcs: u8,
-        torpedo_ammo: u8,
-        railgun_ammo: u8,
-        fuel_capacity: u32,
-        current_fuel: u32,
-        reactor_fuel: u32,
-        power_output: u32,
-    ) -> Ship {
-        Ship {
-            id,
-            owner,
-            faction,
-            s_class,
-            hull_points,
-            shield_points,
-            speed,
-            crew_size,
-            cargo_capacity,
-            location,
-            railguns,
-            torpedoes,
-            pdcs,
-            torpedo_ammo,
-            railgun_ammo,
-            fuel_capacity,
-            current_fuel,
-            reactor_fuel,
-            power_output,
-        }
-    }
+   
 
     #[inline(always)]
     fn get_total_combat_rating(self: Ship) -> u32 {
@@ -530,3 +492,4 @@ pub impl MiniZoneShipImpl of MiniZoneShipTrait {
         self.is_active = false;
     }
 }
+
